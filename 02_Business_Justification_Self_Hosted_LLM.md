@@ -2,14 +2,24 @@
 
 | Field | Value |
 |---|---|
-| Document status | DRAFT v0.2 – revised for a $15K–$55K hardware budget; base material for a future formal report |
+| Document status | DRAFT v0.3 – labor costs revised ($100K salary, 2 hr/week upkeep); base material for a future formal report |
 | Date | 2026-10-16 |
 | Prepared for | [Sponsor / Decision Authority] |
 | Prepared by | [Author] |
 | Companion document | `01_Analysis_of_Alternatives_CUI_LLM_Platform.md` |
-| Supersedes | v0.1 (archived in `archive_v1_large_budget/`) |
+| Supersedes | v0.2 (labor assumptions revised); v0.1 is archived in `archive_v1_large_budget/` |
 
 > **Note.** Figures marked *illustrative* are placeholders that demonstrate the calculation method. Replace them with measured values (users, hours, labor rate, license cost) before using this document to request funding. Items in `[brackets]` need input.
+
+**Labor assumptions used throughout (change here if they differ):**
+
+| Assumption | Value | Basis |
+|---|---|---|
+| Operator salary | $100,000/yr | Given |
+| Hourly rate | **$48.08/hr** | $100,000 ÷ 2,080 hr; salary only, no fringe/overhead multiplier |
+| Ongoing upkeep after setup | **2 hr/week** (104 hr/yr) | Given; costs **$5.0K/yr** (5% of one FTE) |
+| One-time setup/integration/ATO effort (Tier 3) | **160–320 hr** (≈ $8–15K) | *Estimate, not given; confirm with the operator* |
+| Rate used for users' saved time | $48.08/hr | Same salary-only basis, for consistency |
 
 ---
 
@@ -22,8 +32,8 @@ Justify investment in a dedicated, on-premises LLM platform authorized for CUI, 
 - The current tools are **functionally limited and constrained by small context windows**, so they cannot support the document-heavy, multi-step engineering workflows the organization needs (long specs, multi-document comparison, large scripts/codebases, report generation).
 - Staff either work around the limits manually, abandon the tools, or are tempted to use unapproved external tools, which is a CUI spill risk.
 - A self-hosted platform provides **≥128K context**, an **API for automation**, **RAG over internal repositories**, **multi-user concurrency**, and **full control of CUI** inside the existing authorization boundary.
-- **Investment (recommended Tier 3):** about **$35K hardware** (range $33–40K), **$15–35K one-time integration/authorization effort** (mostly internal labor), and roughly **$5–9K/yr** non-labor operating cost plus **0.25–0.5 FTE** operations time. The platform can grow to ~$55K (Tier 5) by adding GPUs.
-- *Illustrative* result: payback in **~3 months** in the expected case (60 active users saving 2 hr/week) and **~21 months** in the conservative case (Section 7).
+- **Investment (recommended Tier 3):** about **$35K hardware** (range $33–40K), a one-time setup effort of **160–320 hours** (≈ **$8–15K** at $48/hr), **$5–9K/yr** non-labor operating cost, and **2 hr/week** upkeep (≈ **$5K/yr**). **3-year total cost including labor: ≈ $71–97K.** The platform can grow to ~$55K hardware (Tier 5) by adding GPUs.
+- *Illustrative* result: payback in **~4 months** in the expected case (60 active users saving 2 hr/week) and **~22 months** in the conservative case (Section 7). The 3-year cost is recovered if the platform saves roughly **21 hours per week across all users** (about 20 minutes per user per week for 60 users).
 - The strongest justification is not only cost: it is **enabling workflows that are impossible today** and **reducing data-handling risk**.
 
 ---
@@ -123,15 +133,19 @@ Recommended **Tier 3**; replace with quotes.
 | Cost element | Estimate |
 |---|---|
 | Hardware (2 × 96 GB GPUs, 4-GPU-capable server, app server, storage/backup, network, UPS) | $33–40K (≈ $35K) |
-| Integration, hardening, ATO documentation (one-time; largely internal labor) | $15–35K |
+| One-time setup labor: install, hardening, stack deployment, RAG, SSO, ATO documentation (160–320 hr × $48.08) | $7.7–15.4K (≈ $8–15K) |
 | Software (open-source stack; OS subscription) | $1–3K/yr |
 | Support/warranty extension | $1–3K/yr |
-| Power and cooling (~1.5–2 kW continuous ≈ 13–17 MWh/yr at $0.10–0.20/kWh) | $1.5–3.5K/yr |
+| Power and cooling (~1.5–2 kW continuous ≈ 13–17 MWh/yr at $0.10–0.20/kWh) | $1.3–3.5K/yr |
 | **Annual non-labor opex** | **$5–9K/yr** |
-| Operations/ML engineering (0.25–0.5 FTE at ~$120K loaded) | $30–60K/yr |
-| **3-yr TCO excl. labor** | **$63–102K** |
-| **3-yr TCO incl. labor** | **$153–282K** |
+| Upkeep labor (2 hr/week × 52 × $48.08) | $5.0K/yr |
+| **Total annual run cost** | **$10–14K/yr** |
+| **3-yr cost excl. labor** (hardware + 3 yr non-labor opex) | **$48–67K** |
+| **3-yr labor** (setup + 3 yr upkeep) | **$23–30K** |
+| **3-yr total cost incl. labor** | **$71–97K** |
 | Expansion to Tier 4/5 (add 1–2 GPUs) | +$9–10K per GPU |
+
+Upkeep covers patching, model updates, user support and monitoring. If the operator's fringe/overhead is included (e.g., ×1.3), upkeep is ≈ $6.5K/yr and setup ≈ $10–20K.
 
 Costs of the status quo to include (fill in): current license/subscription fees $[ ]/yr, support effort $[ ]/yr, productivity lost to limitations, cost of any CUI incident or rework.
 
@@ -145,7 +159,7 @@ Costs of the status quo to include (fill in): current license/subscription fees 
 
 $$\text{Annual benefit} = N_{\text{active}} \times H \times W \times R \times E$$
 
-$N_{\text{active}}$ = regular active users, $H$ = hours saved per user per week, $W$ = working weeks per year (~46), $R$ = burdened labor rate ($/hr), $E$ = realization factor (fraction of saved time turned into useful work; use 0.5–0.7).
+$N_{\text{active}}$ = regular active users, $H$ = hours saved per user per week, $W$ = working weeks per year (~46), $R$ = labor rate ($48.08/hr from a $100K salary; no overhead multiplier), $E$ = realization factor (fraction of saved time turned into useful work; use 0.5–0.7).
 
 $$\text{ROI} = \frac{\text{3-yr benefit} - \text{3-yr cost}}{\text{3-yr cost}} \qquad \text{Payback (months)} = \frac{\text{Upfront cost}}{\text{Net annual benefit} / 12}$$
 
@@ -156,21 +170,22 @@ $$\text{ROI} = \frac{\text{3-yr benefit} - \text{3-yr cost}}{\text{3-yr cost}} \
 | Active users ($N$) | 40 | 60 | 100 |
 | Hours saved / user / week ($H$) | 1.0 | 2.0 | 3.0 |
 | Working weeks ($W$) | 46 | 46 | 46 |
-| Burdened rate ($R$) | $100/hr | $100/hr | $100/hr |
+| Labor rate ($R$) | $48.08/hr | $48.08/hr | $48.08/hr |
 | Realization ($E$) | 0.5 | 0.6 | 0.7 |
-| **Annual benefit** | **$92K** | **$331K** | **$966K** |
-| Annual run cost (non-labor + labor) | $50K | $50K | $60K |
-| Upfront cost (hardware + integration) | $75K (Tier 3, high end) | $60K (Tier 3) | $85K (Tier 5) |
-| **Net annual benefit** | **$42K** | **$281K** | **$906K** |
-| **Payback** | ~21 months | **~2.6 months** | ~1.1 months |
-| **3-yr ROI** | ~23% | **~370%** | ~990% |
+| **Annual benefit** | **$44K** | **$159K** | **$464K** |
+| Annual run cost (non-labor opex + $5K upkeep) | $14K | $12K | $15K |
+| Upfront cost (hardware + setup labor) | $55K (Tier 3: $40K + $15K) | $47K (Tier 3: $35K + $11.5K) | $70K (Tier 5: $55K + $14.5K) |
+| **Net annual benefit** | **$30K** | **$147K** | **$449K** |
+| **Payback** | ~22 months | **~3.8 months** | ~1.9 months |
+| **3-yr ROI** | ~37% | **~480%** | ~1,110% |
 
-> The conservative case returns only modestly on time savings alone, which is why the capability and risk arguments (5.1, 5.3) matter. The optimistic case with 100 active users needs Tier 4–5 capacity and is likely unrealistic as a planning basis. Productivity savings are often not budget-recoverable "cash"; present them as **capacity gained** (more throughput without added headcount) unless a headcount or contract-cost effect can be shown. Run cost uses 0.35 FTE of labor ($42K) plus ~$8K non-labor.
+> Even the conservative case pays back within the 3-year window on time savings alone, but at a modest return, which is why the capability and risk arguments (5.1, 5.3) matter. The optimistic case with 100 active users needs Tier 4–5 capacity and is unlikely as a planning basis. Productivity savings are often not budget-recoverable "cash"; present them as **capacity gained** (more throughput without added headcount) unless a headcount or contract-cost effect can be shown. Run cost = non-labor opex ($9K / $7K / $9.5K) + 2 hr/week upkeep ($5K). Setup labor uses the 160–320 hr estimate (Tier 5: ~300 hr).
 
 ### 7.3 Sensitivity
-- **Biggest driver:** hours saved per user per week. In the expected case, each additional 0.5 hr/week across 60 users is worth ≈ **$83K/yr**.
+- **Biggest driver:** hours saved per user per week. In the expected case, each additional 0.5 hr/week across 60 users is worth ≈ **$40K/yr**.
+- **Break-even:** annual run cost ($12K) is recovered with ≈ **9 hours/week** of gross time saved across all users. Recovering the full 3-year cost ($82.5K) needs ≈ **21 hours/week** (at $E$ = 0.6).
 - **Adoption:** benefits scale with *active* users; plan training and champions.
-- **Labor:** at this hardware budget, the operations labor share is the largest cost. If labor is unfunded or unassigned, the project is at risk regardless of hardware.
+- **Labor:** at 2 hr/week, upkeep is small ($5K/yr) and hardware dominates cost. Doubling upkeep to 4 hr/week adds only $5K/yr; upkeep will rise during growth phases (adding GPUs, model changes, ATO re-reviews).
 - **Utilization:** monitor GPU load; add a GPU at 70% sustained utilization.
 
 ### 7.4 Comparison of Paths (3-year view)
@@ -180,11 +195,11 @@ $$\text{ROI} = \frac{\text{3-yr benefit} - \text{3-yr cost}}{\text{3-yr cost}} \
 | Continue status quo | $[license] | No | Existing | Capability gap persists; shadow-AI risk |
 | Upgrade/expand current tools | $[quote] | Unknown / unlikely | Existing | Ask vendors about context, API and RAG roadmap |
 | Government cloud LLM | $0.1M–$0.6M (usage-driven) | Yes | Moderate (contract/boundary dependent) | Cost scales with long-context use; data leaves site |
-| Self-hosted Tier 1 (pilot) | $27–47K + labor | Partially (few users) | Highest | Good for proof-of-concept |
-| **Self-hosted Tier 3 (recommended)** | **$63–102K + labor** | **Yes** | **Highest** | Production-ready for ~8–20 simultaneous users |
-| Self-hosted Tier 5 | $99–143K + labor | Yes (more users, larger models) | Highest | Reached by adding GPUs as demand proves out |
+| Self-hosted Tier 1 (pilot) | $39–53K incl. labor | Partially (few users) | Highest | Good for proof-of-concept |
+| **Self-hosted Tier 3 (recommended)** | **$71–97K incl. labor** | **Yes** | **Highest** | Production-ready for ~8–20 simultaneous users |
+| Self-hosted Tier 5 | $99–132K incl. labor | Yes (more users, larger models) | Highest | Reached by adding GPUs as demand proves out |
 
-*Break-even vs. cloud depends on usage (see AoA 7.3): roughly 18 months at $4K/month of cloud spend; cloud is cheaper if usage stays light.*
+*Self-hosted rows include hardware, 3 years of non-labor opex, setup labor and 2 hr/week upkeep. Break-even vs. cloud depends on usage: with upfront ≈ $47K and on-prem run cost ≈ $1K/month (including upkeep), cloud spend of $4K/month breaks even in ≈ 16 months; over 3 years the on-prem option averages ≈ $2.3K/month, so cloud is cheaper if spend stays below that.*
 
 ---
 
@@ -219,7 +234,7 @@ $$\text{ROI} = \frac{\text{3-yr benefit} - \text{3-yr cost}}{\text{3-yr cost}} \
 |---|---|
 | Output errors (hallucination) | Citations, human review of anything used in deliverables, policy and training |
 | ATO timeline | Early engagement with security office; hardened baselines |
-| Operations staffing | Assign a named owner and time allocation; documented runbooks |
+| Operations staffing | Assign a named owner with ~2 hr/week protected for upkeep (more during setup and expansion); documented runbooks and a backup person |
 | Quality gap vs. top commercial models | Pilot with side-by-side evaluation on real tasks; use RAG and tuned prompts |
 | TAA/OEM sourcing raises hardware cost 15–40% | Confirm early; get OEM quotes |
 | No hardware redundancy at this budget | Cold spares, data backups, cloud contingency plan |
