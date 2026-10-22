@@ -1,0 +1,169 @@
+% intake-style.sty
+% Shared branding, page layout, headers/footers, cover page, and
+% document-identity macros for the engineering project intake document
+% family.
+%
+% Edit this file to update branding/markings for every document at once.
+% Do not put document-specific content here.
+%
+% Requires building with XeLaTeX (or LuaLaTeX) because of \setmainfont.
+% See README.md for build instructions.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{intake-style}[2026/10/09 v0.2 Engineering intake shared style]
+
+\RequirePackage[letterpaper, margin=1in, headheight=34pt, headsep=10pt, footskip=34pt]{geometry}
+\RequirePackage{fancyhdr}
+\RequirePackage{graphicx}
+\RequirePackage{xcolor}
+\RequirePackage{array}
+\RequirePackage{booktabs}
+\RequirePackage{lastpage}
+\RequirePackage{etoolbox}% provides \ifdefempty, used for the logo-vs-text header switch
+
+% ---------------------------------------------------------------------------
+% Typeface: Times New Roman throughout, via fontspec (requires XeLaTeX or
+% LuaLaTeX). If Times New Roman is not installed on a build machine, replace
+% the font name below with a metrically compatible substitute such as
+% "Liberation Serif" or "Tinos".
+% ---------------------------------------------------------------------------
+\RequirePackage{fontspec}
+\setmainfont{Times New Roman}
+
+\RequirePackage[
+  pdfborder={0 0 0},
+  colorlinks=false
+]{hyperref}
+
+% ---------------------------------------------------------------------------
+% Branding placeholders -- replace with the organization's actual values.
+% ---------------------------------------------------------------------------
+\newcommand{\CompanyName}{[Company / Center Name]}
+\newcommand{\CompanyLogoPath}{}% e.g. {shared/logo.png}; left blank until a real logo is supplied
+\newcommand{\MarkingText}{FOR OFFICIAL USE ONLY}
+
+\newcommand{\SetCompanyName}[1]{\renewcommand{\CompanyName}{#1}}
+\newcommand{\SetCompanyLogo}[1]{\renewcommand{\CompanyLogoPath}{#1}}
+\newcommand{\SetMarkingText}[1]{\renewcommand{\MarkingText}{#1}}
+
+% ---------------------------------------------------------------------------
+% Document identity -- set once near the top of each document entry file
+% via \SetDocIdentity{Title}{Document ID}{Template Version}.
+% ---------------------------------------------------------------------------
+\newcommand{\DocTitle}{Untitled Document}
+\newcommand{\DocID}{DOC-000}
+\newcommand{\TemplateVersion}{v0.1-draft}
+\newcommand{\DocPurpose}{Purpose text not yet set for this document.}
+
+\newcommand{\SetDocIdentity}[3]{%
+  \renewcommand{\DocTitle}{#1}%
+  \renewcommand{\DocID}{#2}%
+  \renewcommand{\TemplateVersion}{#3}%
+}
+\newcommand{\SetDocPurpose}[1]{\renewcommand{\DocPurpose}{#1}}
+
+% ---------------------------------------------------------------------------
+% No first-line paragraph indent. Fillable-field parboxes are deliberately
+% set to the full \linewidth; with the default indent still active, that
+% first line would always overflow by exactly the indent amount.
+% ---------------------------------------------------------------------------
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+
+% ---------------------------------------------------------------------------
+% Header / footer, applied identically to every page of every document.
+%
+% Each zone is wrapped in a fixed-width minipage. This guarantees zones
+% never bleed into one another: if the underlying text (company name,
+% marking text, document ID) is unexpectedly long, it wraps to a second
+% line inside its own zone instead of overlapping a neighboring zone.
+% ---------------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Header: a single centered marking banner. Kept to one zone on purpose --
+% with nothing sharing the line, there is nothing for it to collide with.
+\fancyhead[C]{%
+  \begin{minipage}[t]{0.9\textwidth}
+    \centering\small \MarkingText
+  \end{minipage}%
+}
+
+% Footer: three fixed-width zones (document ID / marking / page count).
+\fancyfoot[L]{%
+  \begin{minipage}[t]{0.32\textwidth}
+    \raggedright\footnotesize \DocID
+  \end{minipage}%
+}
+\fancyfoot[C]{%
+  \begin{minipage}[t]{0.34\textwidth}
+    \centering\footnotesize \MarkingText
+  \end{minipage}%
+}
+\fancyfoot[R]{%
+  \begin{minipage}[t]{0.32\textwidth}
+    \raggedleft\footnotesize Page~\thepage~of~\pageref{LastPage}
+  \end{minipage}%
+}
+
+% ---------------------------------------------------------------------------
+% Cover page: title, branding, and a plain-English purpose statement,
+% followed by an auto-generated table of contents. Call once, immediately
+% after \begin{document}.
+% ---------------------------------------------------------------------------
+\newcommand{\CoverPage}{%
+  \begin{center}
+    \vspace*{2cm}
+    \ifdefempty{\CompanyLogoPath}{%
+      {\Large \CompanyName}%
+    }{%
+      \includegraphics[height=0.9in]{\CompanyLogoPath}%
+    }%
+    \\[1.5cm]
+    {\Huge \DocTitle}\\[1cm]
+    {\normalsize \DocID\ -- Template \TemplateVersion}
+  \end{center}
+  \vspace{2.5cm}
+  \begin{center}
+    \begin{minipage}{0.85\textwidth}
+      {\large Purpose of This Document}\\[6pt]
+      \hrule
+      \vspace{8pt}
+      \DocPurpose
+    \end{minipage}
+  \end{center}
+  \newpage
+  \tableofcontents
+  \newpage
+}
+
+% ---------------------------------------------------------------------------
+% Section heading helper: adds a table-of-contents entry, with a thin rule
+% underneath for visual separation (no bold -- size and the rule carry the
+% emphasis).
+% ---------------------------------------------------------------------------
+\newcommand{\IntakeSection}[1]{%
+  \addcontentsline{toc}{section}{#1}%
+  \vspace{10pt}%
+  {\large #1}\\[-4pt]
+  \hrule
+  \vspace{6pt}%
+}
+
+% ---------------------------------------------------------------------------
+% Persistent guidance text (small, italic) -- stays visible next to a field
+% rather than disappearing once the field is filled in.
+% ---------------------------------------------------------------------------
+\newcommand{\Guidance}[1]{{\small\itshape #1}}
+
+% ---------------------------------------------------------------------------
+% Continuation-sheet note for items that may exceed the fixed inline rows.
+% ---------------------------------------------------------------------------
+\newcommand{\ContinuationNote}{%
+  \Guidance{If more rows are needed, attach a continuation sheet listing the
+  same columns and reference it here by name.}%
+}
+
+\endinput
