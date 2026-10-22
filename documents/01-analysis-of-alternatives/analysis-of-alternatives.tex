@@ -1,0 +1,1002 @@
+% analysis-of-alternatives.tex
+% Document ENG-RPT-01 - Analysis of Alternatives: On-Premises ML Platform
+%
+% Build (from this folder, requires XeLaTeX -- see
+% ../../engineering-intake-templates/README.md):
+%   xelatex -interaction=nonstopmode analysis-of-alternatives.tex
+%   xelatex -interaction=nonstopmode analysis-of-alternatives.tex   (rerun for TOC/page refs)
+%
+% Static report (no fillable fields). Shares branding, page layout, cover page
+% and header/footer markings with the engineering intake template family via
+% intake-style.sty. Companion document: ENG-RPT-02 Business Justification.
+
+\documentclass[11pt]{article}
+
+\usepackage{../../engineering-intake-templates/shared/intake-style}
+\usepackage{../../shared/report-components}
+
+\SetDocIdentity{Analysis of Alternatives: On-Premises ML Platform}{ENG-RPT-01}{v0.4-draft}
+
+% Replace these placeholders once branding and markings are confirmed.
+\SetCompanyName{[Engineering Center Name]}
+\SetMarkingText{FOR OFFICIAL USE ONLY}
+
+\SetDocPurpose{%
+This report compares ways to provide a large-context, multi-user large
+language model (LLM) capability that can be used with Controlled Unclassified
+Information (CUI). It evaluates a proposed two-computer, on-premises design:
+Computer~1, a network-attached storage (NAS) and private-cloud server that
+hosts file shares, storage, software licensing and the LLM application tier;
+and Computer~2, one or two machine-learning (ML) nodes that serve the model
+and run fine-tuning, with the second node providing training capacity and
+backup. The report gives price points, hardware, sizing logic, resilience and
+growth options, risks and open items, so that a decision authority can choose
+a configuration. It is a draft for later formal publication; all prices and
+performance figures are planning estimates that must be replaced with vendor
+quotes and an on-site benchmark before any purchase.%
+}
+
+\begin{document}
+
+\CoverPage
+
+\ReportControlBlock{Draft}{v0.4}{2026-10-22}{\PH{Author}}{\PH{Intake Ref. No.}}{\PH{Recipients}}
+
+\RevisionHistory{%
+  v0.1 & \PH{Author} & 2026-10-14 & Initial AoA (large-budget tiers, single ML platform). \\
+  v0.2 & \PH{Author} & 2026-10-16 & Re-based to a \$15K--\$55K ML-server budget. \\
+  v0.3 & \PH{Author} & 2026-10-22 & Two-computer design (NAS + ML node[s]); dual-node training/backup option; multi-node growth path; LaTeX format. \\
+  v0.4 & \PH{Author} & 2026-10-22 & Sponsor answers: $\geq$20 named / 12 simultaneous users; archive retrieval and training; Node~B as optional second serving node; Autodesk/Bluebeam hosting; Dell sourcing; cloud fallback options. \\
+}
+
+\begin{ReportNote}{Estimates, not quotes}
+All prices, power, throughput and concurrency figures are planning-grade
+estimates (typically $\pm$25--40\%) based on public street pricing and published
+model characteristics. GPU, memory and disk prices are volatile. Items in
+\PH{brackets} are placeholders that still need a value. This document contains
+no CUI; verify that before adding project-specific detail.
+\end{ReportNote}
+
+% ===========================================================================
+\ReportSection[sec:exec]{Executive Summary}
+
+The organization needs an LLM capability that can process CUI with a large
+context window, serve several people at once, and fit engineering workflows
+(document analysis, retrieval over internal repositories, code and script
+assistance, report drafting). The two tools currently provided lack the
+functionality and context size for these workflows (see the companion Business
+Justification).
+
+This revision plans \textbf{two computers} rather than one:
+
+\begin{itemize}
+  \item \textbf{Computer~1 -- NAS and private-cloud server.} File share,
+    bulk storage and backups, software license servers, a private cloud for
+    specific software, and the LLM application tier (gateway, chat interface,
+    retrieval, vector database, model and artifact registry, logging).
+  \item \textbf{Computer~2 -- ML node(s).} Either a \textbf{single node} that
+    serves the model, or \textbf{two nodes}: Node~A serves production use
+    while Node~B runs fine-tuning and experiments at the same time, and can
+    take over serving if Node~A fails.
+\end{itemize}
+
+The design is built so more nodes can be added later: every ML node is the same
+class of machine, sits on the same storage network, and is placed behind the
+same gateway.
+
+\TableTitle[tbl:configs]{System configurations and planning price points (hardware only)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.15} l Y{0.75} Y{1.35}@{}}
+  \toprule
+  Config. & Composition & Hardware & Active users* & Training and resilience \\
+  \midrule
+  \endhead
+  \textbf{S1} & Computer~1 + one 1-GPU node & \$35K (\$30--40K) & 3--8 & Training shares the GPU with serving (run off-hours). No failover. \\
+  \textbf{S2} & Computer~1 + one 2-GPU node & \$44K (\$39--50K) & 8--20, or 3--8 with one GPU training & Split GPUs between serving and training. No failover. \\
+  \textbf{D1} & Computer~1 + two 1-GPU nodes & \$55K (\$48--62K) & 3--8 & Dedicated training node; Node~B can serve at the same capacity if Node~A fails. \\
+  \textbf{D3} & Computer~1 + one 2-GPU node (A) + one 1-GPU node (B) & \$64K (\$57--72K) & 8--20 & Dedicated training node; Node~B serves at reduced capacity (3--8) if Node~A fails. \\
+  \textbf{S4} & Computer~1 + one 4-GPU node & \$65K (\$58--73K) & 25--50, or 3+1 GPU split & Single node; no failover. \\
+  \textbf{D4} & Computer~1 + two 2-GPU nodes & \$73K (\$66--82K) & 8--20 (A); up to 16--40 with both serving & Dedicated training node; Node~B fails over at full capacity. \\
+  \bottomrule
+\end{xltabular}}
+{\footnotesize * Simultaneous active users on the serving node(s). The stated need is at least 20 named users with about 12 at once, so S1 and D1 (1-GPU serving node) fall short. Hardware is at street prices; Dell-configured prices are about 1.15--1.4 times higher (Section~\ref{sec:dell}). Estimates to be confirmed by benchmark.}
+
+\textbf{Confirmed requirements (v0.4).} At least 20 named users, with about 12 using
+the model at the same time. The model must use the archived data on the NAS, both by
+retrieval and by training on selected documents (for example NFPA~780). Training
+alongside serving is the main use of the second node, which may also run a copy of
+the serving model as a second node. The NAS will host Autodesk products and Bluebeam
+\PH{and other software}. Hardware would be ordered from Dell, configured to
+specification. Computer~1 gets its redundancy from disks inside the server rather
+than from a second server.
+
+\textbf{Preliminary recommendation.} Buy \textbf{D3}: one NAS and private-cloud server, a
+2-GPU serving node (Node~A) and a 1-GPU training node (Node~B) that can also serve as a
+second node, using 4-GPU-capable chassis so each node can grow by about \$9K per GPU at
+street prices. Hardware is about \$64K at street prices and about \$83K configured by
+Dell (planning multiplier 1.3, range 1.15--1.4; Section~\ref{sec:dell}). A 1-GPU serving
+node is rated for 3--8 simultaneous users, below the stated 12, so S1 and D1 are not
+recommended. If failover at full capacity is required, add a second GPU to Node~B (D4).
+Alternative~2 (a compliant cloud LLM) remains a possible fallback; options are in
+Section~\ref{sec:fallback}. See Section~\ref{sec:comparison} for the 3-year cost and
+scoring, and Section~\ref{sec:open} for the decisions and information still needed.
+
+\textbf{Cost note.} Computer~1 (about \$15K at street prices, plus its setup and upkeep)
+is needed for the storage, licensing and private-cloud purposes whichever LLM option is
+chosen, so the cost that differs between alternatives is the ML node(s).
+Section~\ref{sec:tco} reports both the full-system and ML-only costs.
+
+% ===========================================================================
+\ReportSection[sec:req]{Problem Statement and Requirements}
+
+\ReportSubsection{Operational needs}
+
+\textbf{Computer~1 (NAS and private cloud)}
+\begin{itemize}
+  \item Departmental file share (SMB, with NFS for the ML nodes), with access
+    control lists, snapshots and quotas. Capacity target: \PH{N~TB now, growth
+    \%/yr}.
+  \item Bulk project and data storage; backup target for the ML nodes.
+  \item License server hosting for \PH{named engineering software}.
+  \item A private cloud for specific software: virtual machines and containers
+    for \PH{named applications, e.g., version control, container registry,
+    notebooks, wiki}.
+  \item The LLM application tier: gateway and API, chat interface, retrieval
+    service, vector database, model and artifact registry, centralized logging.
+\end{itemize}
+
+\textbf{Computer~2 (ML node[s])}
+\begin{itemize}
+  \item Serve an LLM to at least 20 named users, about 12 of them at the same
+    time, with at least 128K-token context per request.
+  \item Run fine-tuning and evaluation jobs (adapter-style fine-tuning of
+    open-weight models, embedding and reranker adaptation, small custom ML
+    models) \emph{at the same time} as serving, when two nodes are provisioned.
+  \item Provide a backup path for serving if the primary node is unavailable.
+  \item Provide an OpenAI-compatible API for scripts and pipelines, and
+    retrieval over controlled repositories with per-group access control.
+  \item Use the archived data on the NAS: answer questions from it with citations
+    (retrieval), and train on selected documents, such as a licensed copy of NFPA~780,
+    so the model handles that material well (Section~\ref{sec:archive}).
+  \item Optionally load the same serving model on Node~B so it can act as a second
+    serving node when it is not training (Section~\ref{sec:nodeb}).
+\end{itemize}
+
+\ReportSubsection{Compliance requirements (CUI)}
+
+\TableTitle{CUI-related requirements and their implications}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.1} Y{1.4}@{}}
+  \toprule
+  Area & Driver & Implication \\
+  \midrule
+  \endhead
+  Safeguarding & NIST SP 800-171 (Rev~2 or 3 per contract); 32~CFR Part~2002 & Access control, audit, encryption and boundary protection for every component, including the NAS. \\
+  Contractual & DFARS 252.204-7012; CMMC Level~2 (if applicable) & Any cloud option must meet FedRAMP Moderate-equivalent and incident-reporting terms. \\
+  Cryptography & FIPS 140-2/140-3 validated modules & FIPS-mode OS and encrypted disks. Confirm that the chosen hypervisor/NAS operating system supports this; an appliance NAS OS may not. \\
+  Identity & CAC/PIV or enterprise MFA; role-based access & OIDC/SAML or Kerberos integration for file share, gateway and consoles. \\
+  Audit & Who asked what; which documents were retrieved; who accessed which files & Logs forwarded to the SIEM with retention \PH{period}. \\
+  Backup and retention & Contract and records rules & Backups stay inside the authorization boundary; encrypted; restore tested. \\
+  Derived artifacts & Fine-tuned weights, embeddings and indexes built from CUI & Treated as CUI: stored in the access-controlled registry and covered by backup and sanitization rules. \\
+  Supply chain & Model provenance; hardware sourcing & Approved model list; hash-verified offline import; TAA/Section~889-compliant hardware (see Section~\ref{sec:procure}). \\
+  Export & ITAR/EAR data may be present & On-premises avoids foreign-hosted data; U.S.-person access control. \\
+  Network & Air-gapped or enclave-only & Offline import of models and packages; internal mirrors. \\
+  Authority & ATO / System Security Plan & One boundary should cover both computers; plan the authorization effort. \\
+  \bottomrule
+\end{xltabular}}
+
+\ReportSubsection{Key assumptions (to validate)}
+\begin{enumerate}
+  \item At least 20 named LLM users, with about 12 using the model at the same time
+    (both stated by the sponsor). That is about 60\% simultaneous use, far above the
+    10--20\% typical of office use, so the design is sized to 12 simultaneous users
+    rather than to a ratio. Expected growth in named users: \PH{N}.
+  \item Typical prompt 4--16K tokens (with retrieval); long jobs up to 128K.
+    Typical response 300--1,500 tokens.
+  \item Targets: time to first token under 3~s (short prompt) and under 20~s
+    (128K prompt); at least 15--20 tokens/s per user while streaming.
+  \item ``Training'' means fine-tuning and adaptation of existing open-weight
+    models and small custom models. Pre-training a new LLM is out of scope at
+    this budget.
+  \item Failover target: \PH{RTO, e.g., manual switchover within 1~hour} for
+    LLM serving. The file share and license services have their own recovery
+    targets: \PH{RTO/RPO}.
+  \item A controlled machine room or rack with 208/240~V circuits is available
+    (GPU nodes are loud and hot; an open office is not suitable).
+  \item Open-weight models are permitted after security review.
+  \item Hardware is ordered from Dell, configured to specification. Prices here are street
+    prices with a planning multiplier of 1.3 (range 1.15--1.4) until a quote is received.
+  \item Storage need (best estimate, to confirm): the archive is about 20--40~TB now and
+    grows 20--25\% per year, so Computer~1 needs about 40--70~TB usable within 3 years,
+    including snapshots, vector indexes and model artifacts.
+  \item The labor assumptions in Section~\ref{sec:tco} were accepted by the sponsor for now.
+\end{enumerate}
+
+% ===========================================================================
+\ReportSection{Evaluation Criteria}
+
+\TableTitle{Criteria and weights (weights revised in v0.3 to reflect the backup requirement)}
+{\small
+\begin{tabularx}{\textwidth}{@{}Y{1.0}Y{2.0}@{}}
+  \toprule
+  Criterion (weight) & Notes \\
+  \midrule
+  CUI compliance and data control (25\%) & Pass/fail gate plus degree of control. \\
+  Capability: model quality and context (15\%) & Reasoning, coding, long-context accuracy. \\
+  Concurrency and scalability (15\%) & Simultaneous users and growth path. \\
+  Resilience and continuity (15\%) & Failover, backup, and impact of a single failure. \\
+  Total cost of ownership, 3 years (15\%) & Hardware, setup and upkeep labor, operating cost. \\
+  Time to capability (5\%) & Procurement lead time and authorization. \\
+  Integration and customization (10\%) & API, retrieval, fine-tuning, workflow tooling. \\
+  \bottomrule
+\end{tabularx}}
+
+% ===========================================================================
+\ReportSection[sec:alts]{Alternatives Considered}
+
+\TableTitle{Alternatives and disposition}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.0} Y{2.0}@{}}
+  \toprule
+  \# & Alternative & Disposition \\
+  \midrule
+  \endhead
+  0 & \textbf{Status quo}: two existing in-house tools & Baseline. No new cost; capability and context gaps persist; limited API and retrieval. Does not provide the storage, licensing or private-cloud capability. \\
+  1 & \textbf{Commercial public SaaS} & \textbf{Eliminated.} Not suitable for CUI. \\
+  2 & \textbf{Compliant cloud LLM} (e.g., Azure OpenAI in Azure Government, AWS Bedrock in GovCloud) & Viable for the LLM only. Fast, strong models, no GPU hardware. Cost scales with long-context use; CUI leaves the site; contract and boundary review needed. Estimated \$0.03M--\$0.4M over 3 years for 20--30 users (usage-driven; verify). \textbf{Computer~1 is still required} for storage and licensing. \\
+  3 & \textbf{On-premises design (Computer~1 + ML node[s])} & Detailed in Section~\ref{sec:hw}. Two families: \textbf{single-node} (S1, S2, S4) and \textbf{dual-node} (D1, D3, D4). \\
+  4 & \textbf{Hybrid}: on-premises for CUI, cloud for non-CUI & Possible later; needs a routing policy and adds mis-routing risk. \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Below the smallest ML node (not recommended for production).} Small
+unified-memory systems (for example NVIDIA DGX Spark-class or AMD Strix Halo
+mini PCs, about \$2--5K) can run large models for one developer, but their
+memory bandwidth is roughly 6--7 times lower than a 96~GB workstation GPU, so
+they do not serve several simultaneous users well.
+
+\ReportSubsection[sec:fallback]{Cloud fallback options}
+
+Whether a cloud service should back up the on-premises LLM is undecided; the options
+below are kept open for refinement.
+
+\TableTitle{Fallback options if the on-premises LLM is unavailable}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.0} Y{1.1} Y{0.9}@{}}
+  \toprule
+  Option & Description & CUI and network considerations & Cost \\
+  \midrule
+  \endhead
+  F0 & No cloud fallback. Users use Tool A or Tool B, or wait. & Nothing leaves the boundary. & None. \\
+  F1 & Commercial cloud LLM for non-CUI work only. & No CUI may be entered; needs a user policy and an approved internet path outside the enclave. & Low, pay per use. \\
+  F2 & Government-cloud LLM authorized for CUI (for example Azure OpenAI in Azure Government or Bedrock in GovCloud), reached over an approved connection. & Needs contract flow-down, an authorization decision, and a network path that an air-gapped design would not have. Data leaves the site. & Pay per use; setup effort for the account, connection and approval; usually no cost while idle. \\
+  F3 & Warm standby: the same open-weight stack, deployed from configuration code onto rented compliant GPU instances only when needed. & Same boundary questions as F2; CUI copies of indexes would be needed there. & Hourly instance cost while running; setup effort. \\
+  \bottomrule
+\end{xltabular}}
+F0 is the baseline in this report. F2 is the most capable and the most demanding to
+authorize. \PH{Select the option(s) to carry forward.}
+
+% ===========================================================================
+\ReportSection[sec:concept]{Proposed System Concept}
+
+\ReportSubsection{Two-computer architecture}
+
+\FigureTitle[fig:arch]{Logical architecture: Computer~1 (NAS and private cloud) and Computer~2 (ML nodes)}
+\begin{center}
+\begin{tikzpicture}[
+  svc/.style={draw, rounded corners=1.5pt, font=\scriptsize, align=center,
+              minimum height=0.8cm, minimum width=3.4cm, inner sep=2pt},
+  host/.style={draw, rounded corners=3pt, inner sep=7pt},
+  lbl/.style={font=\small\itshape},
+  arr/.style={-{Stealth[length=2mm]}, thick},
+  darr/.style={-{Stealth[length=2mm]}, thick, dashed},
+  bi/.style={{Stealth[length=2mm]}-{Stealth[length=2mm]}, thick}
+]
+\node[svc, minimum width=2.4cm] (users) at (0,-1) {Users:\\browser, IDE,\\scripts};
+\node[svc] (gw)  at (5.2,-1) {LLM gateway, chat UI,\\retrieval service};
+\node[svc] (vdb) at (5.2,-2.2) {Vector database,\\model and artifact registry};
+\node[svc] (fs)  at (5.2,-3.4) {File share (SMB/NFS),\\snapshots, backups};
+\node[svc] (lic) at (5.2,-4.6) {License servers,\\private-cloud VMs};
+\begin{scope}[on background layer]
+  \node[host, fit=(gw)(vdb)(fs)(lic), label={[lbl]above:Computer 1: NAS / private cloud}] (c1) {};
+\end{scope}
+\node[svc, minimum width=4.2cm, minimum height=1.3cm] (na) at (12.7,-1) {ML Node A (primary)\\serving: inference,\\embeddings, reranker};
+\node[svc, minimum width=4.2cm, minimum height=1.3cm] (nb) at (12.7,-3.4) {ML Node B (secondary)\\fine-tuning, experiments;\\standby for Node A};
+\node[lbl, above=0.15cm of na] {Computer 2: ML nodes};
+\draw[arr] (users) -- (gw);
+\draw[arr] (gw.east) -- node[above, font=\scriptsize]{inference API} (na.west);
+\draw[darr] (gw.east) ++(0.5,0) |- node[pos=0.25, right, font=\scriptsize]{failover} ([yshift=0.35cm]nb.west);
+\draw[bi] (fs.east) -- node[below, font=\scriptsize]{datasets, checkpoints, backups} (nb.west |- fs.east);
+\end{tikzpicture}
+\end{center}
+{\footnotesize Every node mounts the NAS over the storage network and keeps its own
+local copy of the approved models, so serving continues if Computer~1 is
+briefly unavailable. A second gateway instance can run on Node~B (Section~\ref{sec:resil}).}
+
+\ReportSubsection{Computer 1: roles}
+\begin{itemize}
+  \item \textbf{File and data services:} SMB share with Active Directory or
+    Kerberos authentication, NFS exports to the ML nodes, snapshot schedule,
+    quotas and an encrypted backup target.
+  \item \textbf{License servers:} hosted in virtual machines or on the host.
+    \emph{Check each vendor's terms}: some license managers are bound to a
+    hardware or MAC address and may restrict virtualization.
+  \item \textbf{Private cloud:} a hypervisor (for example Proxmox or KVM on a
+    FIPS-capable Linux) running the specific software \PH{list}, each in its
+    own virtual machine or container, with snapshots and backup.
+  \item \textbf{LLM application tier:} gateway, chat interface, retrieval
+    service, vector database, model and artifact registry, observability.
+\end{itemize}
+
+\ReportSubsection[sec:licenses]{Hosting Autodesk and Bluebeam}
+
+The stated software to host is Autodesk products and Bluebeam. These need to be checked
+with the vendors or reseller before the Computer~1 design is frozen; the points below are
+the questions to ask, not confirmed facts.
+
+\TableTitle{Autodesk and Bluebeam: what to verify}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.7} Y{1.5} Y{1.1}@{}}
+  \toprule
+  Topic & Question & Why it matters \\
+  \midrule
+  \endhead
+  Licensing model & Are the licenses named-user subscriptions that sign in through the vendor's cloud, or network (floating) licenses served from a local license manager? (Autodesk and Bluebeam have largely moved to named-user subscriptions; legacy agreements may still use a local license manager.) & If named-user, a local license server may not be needed; if network, the license manager runs on Computer~1. \\
+  Internet sign-in & Does the product need periodic internet check-in or sign-in? & An enclave or air-gapped network may not allow it. \\
+  Data and collaboration services & Which services are needed (for example Autodesk Vault for data management, Bluebeam collaboration)? Is a self-hosted option available and authorized for CUI? & Cloud versions sit outside the CUI boundary unless authorized. \\
+  Server platform & Do the server components require Windows Server and SQL Server? & Adds Windows Server, database and client-access licensing, and may favor a Hyper-V host. \\
+  Virtualization and hardware binding & Does the vendor support running the license manager in a virtual machine, and is it bound to a host ID or MAC address? & May require a fixed virtual MAC or a dedicated host. \\
+  \bottomrule
+\end{xltabular}}
+
+\ReportSubsection{Computer 2: ML nodes and workloads}
+
+\TableTitle{How each node is used}
+{\small
+\begin{tabularx}{\textwidth}{@{}Y{0.7}Y{1.0}Y{1.0}@{}}
+  \toprule
+  & Single-node configs & Dual-node configs \\
+  \midrule
+  Serving & Node serves all users. & Node~A serves; Node~B is warm standby. \\
+  Fine-tuning & Time-shared with serving (off-hours) or on a separate GPU if the node has two or more. & Runs on Node~B concurrently with serving on Node~A. \\
+  Experiments and evaluation & Same as fine-tuning. & Node~B; does not disturb production latency. \\
+  Failure of the node & Service down until repaired or the cloud fallback is used. & Gateway routes to Node~B; training pauses until Node~A returns. \\
+  Maintenance (patching, driver or model upgrades) & Planned downtime. & Rolling: patch Node~B first, then switch and patch Node~A. \\
+  \bottomrule
+\end{tabularx}}
+
+A dual-node design is worth its extra cost mainly for three reasons: (1)
+training cannot degrade user-facing latency, (2) there is a failover path, and
+(3) upgrades can be tested on Node~B before production sees them. A single
+node with two or more GPUs can also train and serve at the same time by
+dedicating GPUs to each, but it shares one failure domain and one power supply.
+
+\ReportSubsection[sec:archive]{Archive knowledge: retrieval and fine-tuning}
+
+Archived project data on the NAS should be usable by the model. Two techniques do
+different jobs, and the design uses both.
+
+\TableTitle{Retrieval versus fine-tuning for archive knowledge}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.6} Y{1.1} Y{1.0} Y{1.1}@{}}
+  \toprule
+  Technique & What it does & Strengths & Limits \\
+  \midrule
+  \endhead
+  Retrieval (index the documents) & Splits documents into passages, stores them in a searchable index, and gives the model the best-matching passages with each question. & Quotes exact wording and cites document, clause and page; new files are usable as soon as they are indexed; follows NAS permissions; no training time. & Answer quality depends on finding the right passages; limited by the context size per question. \\
+  Fine-tuning (train an adapter) & Adjusts the model using example questions and answers or documents. & Learns vocabulary, formats and how to do tasks (for example draft an inspection checklist in the house format); shorter prompts. & Does not reliably memorize a document and can state wrong clause numbers with confidence; content is hard to update or remove; must be re-tested after each change; the resulting weights are CUI. \\
+  \bottomrule
+\end{xltabular}}
+
+Giving the model a PDF and training on it will not by itself make it a dependable
+expert. For a standard such as NFPA~780, where exact wording matters, \textbf{retrieval
+with citations is the primary mechanism}; fine-tuning on reviewed examples teaches the
+model how to use and reason about the material. A fine-tuned adapter is deployed only
+if it measurably beats retrieval alone.
+
+\textbf{Example workflow: NFPA~780.}
+\begin{enumerate}
+  \item Place the licensed PDF in a controlled library folder on the NAS with the intended
+    access groups.
+  \item An ingestion job (run on Node~B or on CPU) extracts text and tables, applies optical
+    character recognition to scanned pages, splits by section and clause, creates
+    embeddings, and stores them in the vector database with edition and access metadata.
+  \item Users ask questions; the model answers with citations to clause and page.
+  \item Optional training: example questions, answers and tasks are generated from the
+    document and reviewed by an engineer; an adapter is trained on Node~B; it is evaluated
+    against a held-out set of questions with known answers and compared with retrieval alone.
+  \item When a new edition is issued, re-ingest it with the edition recorded so that old and
+    new requirements are not mixed.
+\end{enumerate}
+
+\textbf{Points to resolve.}
+\begin{itemize}
+  \item \textbf{Formats.} Text-based and scanned documents work. CAD and drawing files (for
+    example DWG or Revit) are not text; in the base plan only titles, annotations and
+    metadata can be extracted. Reading drawings visually needs a vision model that is not
+    budgeted here.
+  \item \textbf{Publisher licenses.} Standards such as NFPA~780 are copyrighted. Confirm that
+    the license allows internal indexing and AI training.
+  \item \textbf{Access control.} Retrieval must respect NAS permissions. A model trained on a
+    restricted folder must not be available to people without access, so train separate
+    adapters per access group, or train only on material open to all users of that model.
+  \item \textbf{Derived data.} Indexes, embeddings and adapters built from CUI are treated as
+    CUI and covered by backup and sanitization rules.
+  \item \textbf{Effort.} Ingestion, OCR and training run on Node~B and store results on
+    Computer~1; archive size and formats (open item) set the effort.
+\end{itemize}
+
+\ReportSubsection[sec:nodeb]{Node B operating modes}
+
+Training alongside serving is the main use of Node~B. Because it is the same class of
+machine as Node~A, it can also run a copy of the serving model. This is an option within
+the design, not a fixed decision.
+
+\TableTitle{Node B modes}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.7} Y{1.1} Y{1.4}@{}}
+  \toprule
+  Mode & When & Effect on capacity \\
+  \midrule
+  \endhead
+  1. Training (default) & Fine-tuning, document ingestion, OCR and evaluation jobs run on Node~B. & Node~A serves users alone, so capacity is Node~A's. \\
+  2. Second serving node & No training job is running; Node~B loads the same model and the gateway shares the load. & Adds about 3--8 simultaneous users (1 GPU) or 8--20 (2 GPUs). Training jobs take priority: the gateway drains Node~B sessions before a job starts. \\
+  3. Failover & Node~A is unavailable. & Node~B serves alone at its own capacity (3--8 users with 1 GPU); training is paused. \\
+  \bottomrule
+\end{xltabular}}
+
+A 1-GPU Node~B cannot train and serve at the same time: one 96~GB GPU holds either the
+serving model with its cache (about 63~GB plus cache) or a training job (about 20--90~GB).
+A 2-GPU Node~B (D4) can do one of each. Training jobs should save checkpoints often so
+they can be paused for failover or for serving. A job queue (for example Slurm or
+Kubernetes with priority classes) enforces the policy; a typical policy is training at
+night and on weekends, and serving on Node~B during working hours when it is idle.
+
+\ReportSubsection{Software stack (self-hosted, no outbound connectivity)}
+
+\TableTitle{Software layers}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.6} Y{1.0}@{}}
+  \toprule
+  Layer & Candidates & Purpose \\
+  \midrule
+  \endhead
+  OS and virtualization & RHEL, Rocky or Ubuntu Pro in FIPS mode with STIG hardening; KVM/Proxmox; Docker or k3s & Hardened base; private cloud. \\
+  Storage & ZFS (RAID-Z2) or equivalent, SMB/NFS, snapshot and replication tooling & File share, backups, datasets. \\
+  Inference engine & vLLM or SGLang (TensorRT-LLM optional) & Continuous batching, paged KV cache, prefix caching. \\
+  Training tools & PEFT/LoRA frameworks, experiment tracking (e.g., MLflow) & Adapter fine-tuning, evaluation. \\
+  Gateway & LiteLLM or NGINX with OIDC, health checks, optional keepalived virtual IP & OpenAI-compatible API, quotas, failover routing. \\
+  User interface & Open WebUI or similar & Chat, uploads, shared prompts. \\
+  Retrieval & Open embedding model and reranker; pgvector or Qdrant & Cited answers with access-control enforcement. \\
+  Document ingestion & PDF and Office text extraction, OCR for scanned pages, embedding model & Turn NAS archive content into searchable passages. \\
+  Observability & Prometheus, Grafana, DCGM exporter, log forwarding to SIEM & Utilization, latency, audit. \\
+  Configuration management & Ansible or similar, stored in the NAS git server & Identical node builds; fast rebuild. \\
+  \bottomrule
+\end{xltabular}}
+
+\ReportSubsection{Model selection approach}
+Use a portfolio sized to the node:
+
+\TableTitle{Model roles and memory}
+{\small
+\begin{xltabular}{\textwidth}{@{}Y{0.9}Y{1.6}Y{0.7}@{}}
+  \toprule
+  Role & Candidate classes (verify versions, licenses, provenance) & Weights memory \\
+  \midrule
+  \endhead
+  General assistant & OpenAI gpt-oss-120b (mixture of experts, Apache 2.0, about 5B active parameters) & about 63~GB (4-bit) \\
+  Mid-size general or coding & Llama 3.x 70B, Gemma 27B, Mistral Small/Medium class, NVIDIA Nemotron & 15--40~GB (4-bit) to 70~GB (FP8) \\
+  Large mixture of experts (4-GPU node only) & Llama 4 Maverick-class (about 400B total) at 4-bit & about 200--220~GB \\
+  Embeddings and reranker & Small open models & 1--4~GB \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Provenance policy.} This report assumes U.S. or allied-origin models
+only; many organizations prohibit models from foreign-adversary developers on
+government-related systems regardless of license. Download on an internet-connected
+system, scan, hash-verify, store as \texttt{safetensors} (no pickle files), and
+import through the approved transfer process. Legal review of each license is
+required. Mixture-of-experts models are well suited to this budget: few active
+parameters per token mean one 96~GB GPU can serve several users quickly, and
+the cache memory per token is small.
+
+\ReportSubsection{How multiple users share the system}
+\begin{enumerate}
+  \item \textbf{Continuous batching:} the inference engine interleaves many users'
+    requests token by token, so one loaded model serves everyone at once.
+  \item \textbf{Paged KV cache:} each active conversation uses GPU memory in
+    proportion to its context length; memory is usually the limit for long
+    context (Section~\ref{sec:sizing}).
+  \item \textbf{Prefix caching:} shared system prompts and repeated documents are cached.
+  \item \textbf{Quotas and priority:} the gateway enforces per-user and per-team token
+    budgets and prioritizes interactive use over batch jobs.
+  \item \textbf{Isolation:} conversations and retrieval indexes are partitioned by
+    user and group; logging is per user.
+  \item \textbf{Batch queue:} large offline jobs run off-peak.
+\end{enumerate}
+
+\ReportSubsection[sec:resil]{Resilience, backup and multi-node growth}
+
+\TableTitle{Failure modes and responses}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.8}Y{1.0}Y{1.0}Y{1.2}@{}}
+  \toprule
+  Failure & Single-node configs & Dual-node configs & Mitigation \\
+  \midrule
+  \endhead
+  ML node A down & LLM unavailable. & Gateway fails over to Node~B; training paused. & Health checks; models staged locally on both nodes; documented switchover. \\
+  ML node B down & Not applicable. & No user impact; no failover or training until repaired. & Spare parts; warranty. \\
+  One GPU fails & Node continues with fewer GPUs if the model fits; otherwise down. & Same, plus failover. & Keep one cold-spare GPU if the budget allows. \\
+  Computer 1 (NAS) down & File share, license servers, private cloud and the gateway/retrieval tier are down. & Same for NAS services; LLM serving continues if a second gateway runs on Node~B (retrieval corpus unavailable). & Redundant PSUs, RAID-Z2, UPS; VM backups; tested restore; optional replica (Section~\ref{sec:hw}). \\
+  Disk failure on NAS & Array degraded but online. & Same. & RAID-Z2 tolerates two disks; hot spare or fast replacement. \\
+  Power loss & All down. & All down. & UPS with graceful shutdown; generator if mission-critical. \\
+  Bad model or software update & Rollback only. & Test on Node~B first. & Versioned registry; configuration as code. \\
+  Site loss (fire, flood) & Data loss unless backed up elsewhere. & Same. & Encrypted offline or off-site copy of backups within the CUI boundary. \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Growth path (multi-node).}
+\begin{itemize}
+  \item \textbf{Same build, more nodes.} Every ML node uses the same chassis class,
+    operating-system image and configuration, so a third or fourth node is another
+    copy. The storage switch has spare 25~GbE ports, and the gateway load-balances
+    across any number of nodes.
+  \item \textbf{Scale out by replicas.} More nodes serve more simultaneous users
+    (each node holds a full copy of the model) or run more training jobs in
+    parallel. Add GPUs inside a node (about \$9K each) before adding a node.
+  \item \textbf{Limits.} These PCIe-based workstation GPUs do not support
+    efficient multi-node tensor parallelism, so a single model replica must fit
+    inside one node (up to 384~GB on a 4-GPU node). A single training job spanning
+    several nodes would need an RDMA-capable 100--200~GbE fabric (additional
+    network cards and switch, roughly \$7--15K for two nodes; estimate); this is
+    not part of the base plan.
+  \item \textbf{Computer 1 redundancy.} A second NAS/private-cloud server (about
+    \$12--18K) with replicated storage and virtual machines is the next step if
+    the license servers or file share become critical; see Section~\ref{sec:open}.
+\end{itemize}
+
+% ===========================================================================
+\ReportSection[sec:hw]{Hardware, Price Points and Configurations}
+
+\ReportSubsection[sec:nas]{Computer 1: NAS and private-cloud server}
+
+\TableTitle{Computer 1 reference bill of materials (planning estimates)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.9}Y{2.0}r@{}}
+  \toprule
+  Component & Specification & Est. cost \\
+  \midrule
+  \endhead
+  Chassis and platform & 2U/4U rack, 12 or more 3.5-inch bays, one 16--24-core server CPU, TPM~2.0, BMC, redundant power supplies & \$3--4K \\
+  Memory & 256~GB ECC & \$1.5--2.5K \\
+  System and VM storage & 2 $\times$ 1.9~TB NVMe (mirror, OS and hypervisor); 2 $\times$ 3.8~TB NVMe (mirror, VMs, vector database) & \$1--1.5K \\
+  Bulk storage & 8 $\times$ 20~TB enterprise HDD in RAID-Z2 or RAID~6 (about 100~TiB usable; plan at most 80\% fill); 4 bays free for growth & \$3--3.6K \\
+  Controller and network & SAS HBA; dual-port 25~GbE & \$0.5--0.8K \\
+  UPS and rack & 3~kVA UPS shared with the ML nodes & \$1--2K \\
+  OS and hypervisor subscription & FIPS-capable Linux and virtualization support & \$0.3--1K \\
+  Switch, firewall, cabling & 25~GbE switch with spare ports, firewall, management network & \$1.5--2.5K \\
+  \midrule
+  \textbf{Computer 1 total} & & \textbf{\$12--18K (about \$15K)} \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Storage sizing (best estimate, to confirm).} The archive is assumed to be about
+20--40~TB now, growing 20--25\% per year, so about 40--70~TB usable is needed within 3
+years including snapshots, vector indexes and model artifacts. The 8 $\times$ 20~TB array
+(about 100~TiB usable, filled to at most 80\%) covers this with room to spare, and 4
+bays remain free.
+
+\textbf{Redundancy.} Following the sponsor's direction, Computer~1 is protected by its
+disks rather than by a second server: RAID-Z2 (tolerates two disk failures), a hot spare
+(add one 20~TB drive, about \$0.4K), redundant power supplies and a UPS, plus snapshots.
+This covers disk failure and accidental deletion. It does not cover loss of the server,
+ransomware or a site loss, because the data and the snapshots share one machine; an
+encrypted offline backup set rotated off-site (about \$2--4K) closes that gap and is
+recommended but optional.
+
+Likely additions not included in the table: Windows Server, database and client-access
+licensing for Autodesk and Bluebeam server components (about \$2--8K; estimate, depends on
+the products chosen; Section~\ref{sec:licenses}).
+
+\ReportSubsection{Computer 2: ML node building blocks}
+
+\TableTitle{ML node options (each in a 4-GPU-capable chassis so GPUs can be added later)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.0} Y{1.4} r@{}}
+  \toprule
+  Node & GPUs & Host and notes & Est. cost \\
+  \midrule
+  \endhead
+  \textbf{N1} & 1 $\times$ RTX PRO 6000 Blackwell 96~GB (Max-Q, 300~W), \$8--10K & 16--32-core CPU, 256~GB RAM, 2 $\times$ 3.8~TB NVMe, dual 1600--2000~W PSUs, 25~GbE: \$9--11K; misc.\ \$1K & \$18--22K \\
+  \textbf{N2} & 2 GPUs (192~GB total), \$16--20K & Same class of host: \$10--11K; misc.\ \$1K & \$27--32K \\
+  \textbf{N4} & 4 GPUs (384~GB total), \$32--40K & Host with 512~GB RAM, larger PSUs: \$12--13K; misc.\ \$2K & \$46--55K \\
+  \bottomrule
+\end{xltabular}}
+
+Adding one GPU to an existing node costs about \$8--10K. Government-channel
+(TAA-compliant OEM) pricing is often 15--40\% higher than the street prices used
+here (Section~\ref{sec:procure}).
+
+\ReportSubsection{System configurations and price ladder}
+
+\TableTitle{Configurations (Computer~1 plus ML nodes)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.3} r r r@{}}
+  \toprule
+  Config. & ML node(s) & Hardware total & GPU memory & Named users \\
+  \midrule
+  \endhead
+  \textbf{S1} & N1 & \$35K (\$30--40K) & 96~GB & 10--30 \\
+  \textbf{S2} & N2 & \$44K (\$39--50K) & 192~GB & 25--75 \\
+  \textbf{D1} & N1 + N1 (A + B) & \$55K (\$48--62K) & 2 $\times$ 96~GB & 10--30 \\
+  \textbf{D3} & N2 (A) + N1 (B) & \$64K (\$57--72K) & 192 + 96~GB & 30--100 \\
+  \textbf{S4} & N4 & \$65K (\$58--73K) & 384~GB & 75--250 \\
+  \textbf{D4} & N2 + N2 (A + B) & \$73K (\$66--82K) & 2 $\times$ 192~GB & 30--100 (A); up to 60--200 with both serving \\
+  \bottomrule
+\end{xltabular}}
+
+\TableTitle{Upgrade paths}
+{\small
+\begin{tabularx}{\textwidth}{@{}Y{1.0}Y{0.6}Y{1.4}@{}}
+  \toprule
+  Step & Added cost & Result \\
+  \midrule
+  S1 $\to$ S2 (add one GPU) & about \$9K & Doubles memory; train and serve at once on separate GPUs. \\
+  S1 $\to$ D1 (add node B) & about \$20K & Dedicated training node and failover path. \\
+  D1 $\to$ D3 (add GPU to node A) & about \$9K & Roughly doubles serving capacity; failover is at reduced capacity. \\
+  D3 $\to$ D4 (add GPU to node B) & about \$9K & Failover at full capacity; both nodes can serve when not training. \\
+  Any $\to$ third node & \$18--50K & More replicas or parallel training jobs. \\
+  \bottomrule
+\end{tabularx}}
+
+\ReportSubsection[sec:dell]{Dell-configured pricing}
+
+Hardware would be ordered from Dell, configured to specification. Street prices
+understate that cost because enterprise servers include vendor-qualified components,
+warranty and support. A planning multiplier of 1.3 (range 1.15--1.4) is applied to
+hardware until a quote is available; labor and operating costs are unchanged.
+
+\TableTitle[tbl:dell]{Hardware and 3-year cost with Dell-configured pricing (USD)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{0.7} Y{0.9} Y{0.7} Y{1.0}@{}}
+  \toprule
+  Config. & Street-price hardware & Dell-configured hardware (range) & Dell hardware (expected) & 3-yr total, Dell-configured \\
+  \midrule
+  \endhead
+  S1 & \$30--40K & \$35--56K & \$46K & \$81--121K \\
+  S2 & \$39--50K & \$45--70K & \$57K & \$94--140K \\
+  D1 & \$48--62K & \$55--87K & \$72K & \$117--174K \\
+  \textbf{D3} & \$57--72K & \$66--101K & \textbf{\$83K} & \textbf{\$131--192K} \\
+  S4 & \$58--73K & \$67--102K & \$85K & \$122--181K \\
+  D4 & \$66--82K & \$76--115K & \$95K & \$144--211K \\
+  \bottomrule
+\end{xltabular}}
+{\footnotesize 3-year totals add 3 years of operating cost, setup labor and upkeep (Table~\ref{tbl:tco}) to the Dell-configured hardware.}
+
+\textbf{Notes for the Dell quote.}
+\begin{itemize}
+  \item Ask which current GPU-capable PowerEdge models (for example the 2U R-series and the
+    GPU-dense XE-series) and Precision rack or tower workstations support the RTX PRO 6000
+    Blackwell, how many GPUs each holds, and the power and cooling needed. The GPU count
+    per chassis decides the growth path; confirm model numbers with the Dell account team.
+  \item Dell servers typically use passive 600~W Server Edition GPUs instead of 300~W Max-Q
+    cards; add about 0.3~kW per GPU to the power figures in the facility table.
+  \item For Computer~1, request a storage-dense 2U PowerEdge with 12 or more 3.5-inch bays,
+    redundant power, TPM~2.0 and iDRAC, with NVMe boot or VM drives.
+  \item Dell support bundled in the quote (for example ProSupport) may replace part of the
+    annual non-labor support cost assumed below.
+  \item Request country-of-origin and TAA/Section~889 documentation with the quote.
+\end{itemize}
+
+\ReportSubsection[sec:sizing]{Sizing logic}
+
+\textbf{Weights memory} is parameters times bytes per parameter (FP16 = 2,
+FP8 = 1, 4-bit $\approx$ 0.5), plus about 10\% overhead. The \textbf{KV cache}
+per token is
+\[
+  \text{KV bytes/token} = 2 \times \text{layers} \times \text{KV heads} \times \text{head dim} \times \text{bytes per element}.
+\]
+
+\textbf{Example 1: gpt-oss-120b on one 96~GB GPU.} Approximate architecture: 36
+layers, 8 KV heads, head dimension 64, with about half the layers using a short
+sliding window, so only about 18 layers cache the full context. In BF16 the
+cache is about $2 \times 18 \times 8 \times 64 \times 2~\text{B} \approx 37$~KB per
+token, or about 4.7~GB for a 128K-token session. With
+$96 \times 0.9 \approx 86$~GB and about 63~GB of weights, roughly 23~GB remains
+for cache: about 5 simultaneous 128K sessions or 70 or more at 8K context.
+Compute, not memory, usually limits short-prompt use, which is why one GPU is
+rated for 3--8 simultaneous active users.
+
+\textbf{Example 2: 70B dense model in FP8 on two GPUs (192~GB).} With 80 layers,
+8 KV heads, head dimension 128 and an FP8 cache, the cost is
+$2 \times 80 \times 8 \times 128 \times 1~\text{B} \approx 160$~KB per token (about
+21~GB per 128K session). After about 70~GB of weights, about 103~GB remains:
+roughly 5 full-128K sessions or 80 at 8K. A mixture-of-experts model is therefore
+much more efficient than a dense 70B model for long-context, multi-user serving.
+
+\[
+  \text{Concurrent sessions} \approx \frac{\text{GPU memory} \times 0.9 - \text{weights}}{\text{average context tokens} \times \text{KV bytes per token}}
+\]
+
+\textbf{Throughput (order of magnitude).} Each GPU has about 1.8~TB/s memory
+bandwidth. A small-active-parameter mixture-of-experts model can sustain roughly
+1,000--3,000 aggregate output tokens/s per GPU under batching. Dense 70B models
+are several times slower. \emph{Benchmark the actual model and real prompts
+before purchase.}
+
+\textbf{Fine-tuning memory (planning estimates).}
+
+\TableTitle{Fine-tuning feasibility on 96 GB and 192 GB nodes}
+{\small
+\begin{xltabular}{\textwidth}{@{}Y{1.1}Y{0.8}Y{1.0}@{}}
+  \toprule
+  Method and model & Approx.\ GPU memory & Fits on \\
+  \midrule
+  \endhead
+  Adapter (LoRA/QLoRA), 7--30B model & 20--70~GB & One 96~GB GPU \\
+  QLoRA, 70B dense model (4-bit base) & 48--70~GB & One 96~GB GPU (tight at long sequence lengths) \\
+  Adapter fine-tuning of gpt-oss-120b or similar & about 65--90~GB or more (verify with current tooling) & One 96~GB GPU is tight; two GPUs (192~GB) is comfortable \\
+  Full fine-tuning (about 16 bytes per parameter with Adam in mixed precision) & 7B: about 112~GB; 30B: about 480~GB & 7B or smaller only on a 2-GPU node; larger is out of scope \\
+  Pre-training a new LLM & Far beyond this budget & Not feasible \\
+  \bottomrule
+\end{xltabular}}
+
+Adapter jobs on a few thousand to roughly one hundred thousand examples typically
+run for hours to a few days on one GPU; confirm in the pilot. The GPUs connect
+over PCIe (no NVLink), which is fine for serving and adapter training.
+
+\ReportSubsection{Sizing check against the stated requirement}
+
+Requirement: at least 20 named users, about 12 generating at the same time.
+\begin{itemize}
+  \item \textbf{Streaming load.} 12 users $\times$ 20 tokens/s is about 240 tokens/s,
+    far below the roughly 1,000--3,000 tokens/s a mixture-of-experts model can sustain per
+    GPU in aggregate.
+  \item \textbf{Cache memory.} With gpt-oss-120b, 12 sessions of 16K tokens need about 7~GB;
+    even 3 sessions at 128K (about 14~GB) plus 9 at 16K (about 5~GB) need about 19~GB, which
+    fits in the roughly 23~GB left on one 96~GB GPU after the weights.
+  \item \textbf{Limiting factor.} Processing many long prompts at once (prompt prefill) and
+    keeping time to first token low. This is why one GPU is rated 3--8 simultaneous users;
+    the rating is conservative and the pilot benchmark may show more.
+  \item \textbf{Conclusion.} A 1-GPU serving node is marginal for 12 users. A 2-GPU node
+    (rated 8--20) meets the need with margin, and Node~B can add capacity when it is not
+    training. If named users grow well beyond 20, simultaneous use may exceed 20: add a GPU
+    or use Node~B as a second serving node.
+\end{itemize}
+
+\ReportSubsection{Facility}
+
+\TableTitle{System power at load and circuit guidance}
+{\small
+\begin{tabularx}{\textwidth}{@{}l Y{0.6} Y{1.4}@{}}
+  \toprule
+  Config. & Power at load & Circuit and cooling \\
+  \midrule
+  S1 & 1.1--1.5~kW & One 208/240~V 20~A circuit. \\
+  S2 & 1.6--2.1~kW & One 208/240~V 20~A circuit. \\
+  D1 & 1.9--2.5~kW & One 208/240~V 20~A circuit (about 3.3~kW continuous). \\
+  D3 & 2.4--3.1~kW & Two 20~A circuits, or one 30~A circuit, with separate PDUs per node. \\
+  S4 & 2.3--3.1~kW & Two 20~A circuits or one 30~A circuit. \\
+  D4 & 2.9--3.7~kW & Two 20~A circuits or one 30~A circuit; about 12,600~BTU/h at the top of the range. \\
+  \bottomrule
+\end{tabularx}}
+
+Figures assume 300~W (Max-Q) GPUs: about 0.8--1.0~kW for N1, 1.3--1.6~kW for N2,
+2.0--2.6~kW for N4 and 0.3--0.5~kW for Computer~1. If Dell supplies 600~W Server
+Edition GPUs, add about 0.3~kW per GPU. The nodes are loud; place them
+in a machine room or sound-attenuated rack.
+
+\ReportSubsection[sec:procure]{Procurement considerations}
+\begin{itemize}
+  \item \textbf{Dell as vendor; TAA, Section 889 and NDAA compliance.} Dell is the stated
+    vendor for configured-to-order servers. Request quotes for Computer~1 and for each
+    candidate node configuration, with country-of-origin and TAA/Section~889
+    documentation, and compare with the street-price planning figures in this report
+    (Section~\ref{sec:dell}).
+  \item \textbf{Memory and disk price volatility.} Server RAM and large HDD prices
+    have been unstable. Quote early and consider buying less RAM now with expansion
+    later.
+  \item \textbf{Warranty and spares.} Three-year on-site coverage where available; hold
+    a spare PSU and a spare HDD at minimum. Plan to retain failed drives (CUI)
+    rather than returning them.
+  \item \textbf{License servers.} Confirm with each software vendor that the license
+    server may run in a virtual machine and what hardware binding applies, before
+    finalizing the Computer~1 design.
+  \item \textbf{Lead time and obsolescence.} Confirm GPU availability; plan for a
+    3--5 year service life. The model layer can be replaced without hardware change.
+\end{itemize}
+
+% ===========================================================================
+\ReportSection[sec:comparison]{Comparative Analysis}
+
+\ReportSubsection[sec:tco]{Three-year cost}
+
+Hardware in this table is at street prices; Dell-configured totals are in
+Table~\ref{tbl:dell}. Assumptions (also used in the Business Justification and accepted by
+the sponsor for now): operator salary
+\$100,000/year, or \$48.08/hour with no overhead multiplier. Upkeep: 2~hr/week
+for the ML side (given) plus 1~hr/week for Computer~1 (assumed); a second node
+adds 1~hr/week (assumed). Setup: 80--160~hr for Computer~1, 160--320~hr for the
+first ML node, and 40--80~hr for a second node (all assumed).
+
+\TableTitle[tbl:tco]{Estimated 3-year cost by configuration (USD)}
+{\scriptsize
+\begin{xltabular}{\textwidth}{@{}l Y{0.75} Y{1.15} Y{0.75} Y{0.8} Y{0.8} Y{0.8}@{}}
+  \toprule
+  Config. & Hardware & Setup labor & Annual non-labor opex & Annual upkeep & \textbf{3-yr total} & 3-yr ML only$^\dagger$ \\
+  \midrule
+  \endhead
+  S1 & \$30--40K & 240--480~hr; \$11.5--23.1K & \$4--6.5K & 3~hr/wk; \$7.5K & \textbf{\$76--105K} & \$47--63K \\
+  S2 & \$39--50K & 240--480~hr; \$11.5--23.1K & \$5--8K & 3~hr/wk; \$7.5K & \textbf{\$88--120K} & \$59--77K \\
+  D1 & \$48--62K & 280--560~hr; \$13.5--26.9K & \$6--10K & 4~hr/wk; \$10K & \textbf{\$110--149K} & \$80--107K \\
+  D3 & \$57--72K & 280--560~hr; \$13.5--26.9K & \$7--11.5K & 4~hr/wk; \$10K & \textbf{\$122--163K} & \$92--121K \\
+  S4 & \$58--73K & 240--480~hr; \$11.5--23.1K & \$7--11K & 3~hr/wk; \$7.5K & \textbf{\$113--152K} & \$84--109K \\
+  D4 & \$66--82K & 280--560~hr; \$13.5--26.9K & \$8--13K & 4~hr/wk; \$10K & \textbf{\$134--178K} & \$104--136K \\
+  \bottomrule
+\end{xltabular}}
+{\footnotesize $^\dagger$ Excludes Computer~1 (about \$29--42K over 3 years, including its hardware, setup, operating cost and 1~hr/wk upkeep), which is needed for storage and licensing under any LLM alternative except the status quo. Non-labor opex covers support, software, power and cooling. 3-year total = hardware + setup labor + 3 $\times$ (non-labor opex + upkeep).}
+
+\ReportSubsection{Scoring}
+
+\TableTitle{Weighted scores (1 = poor, 5 = excellent; illustrative, revise with stakeholders)}
+{\small
+\begin{xltabular}{\textwidth}{@{}Y{1.5} r r r r r r@{}}
+  \toprule
+  Criterion (weight) & Alt 0 & Alt 2 & S2 & D1 & D3 & D4 \\
+  \midrule
+  \endhead
+  CUI compliance and control (25\%) & 4 & 3 & 5 & 5 & 5 & 5 \\
+  Capability and context (15\%) & 1 & 5 & 4 & 3 & 4 & 4 \\
+  Concurrency and scalability (15\%) & 2 & 5 & 2 & 2 & 3 & 4 \\
+  Resilience and continuity (15\%) & 3 & 5 & 2 & 4 & 4 & 4 \\
+  3-year cost (15\%) & 5 & 3 & 4 & 3 & 3 & 2 \\
+  Time to capability (5\%) & 5 & 3 & 3 & 3 & 3 & 3 \\
+  Integration and customization (10\%) & 1 & 3 & 5 & 5 & 5 & 5 \\
+  \midrule
+  \textbf{Weighted score} & \textbf{3.00} & \textbf{3.90} & \textbf{3.70} & \textbf{3.70} & \textbf{4.00} & \textbf{4.00} \\
+  \bottomrule
+\end{xltabular}}
+
+Interpretation: D3 scores as high as D4 at about \$9K less hardware at street prices, and it keeps a
+failover path and a dedicated training node. The compliant cloud scores well on the
+LLM alone but is sensitive to usage growth and to CUI contract and risk acceptance,
+and it does not replace Computer~1. The scores are judgments, not measurements. D1 appears
+in the table but does not meet the stated 12 simultaneous users.
+
+\ReportSubsection{Break-even versus a compliant cloud LLM}
+\[
+  \text{Break-even (months)} = \frac{\text{On-premises ML upfront cost}}{\text{Monthly cloud cost} - \text{Monthly on-premises ML run cost}}
+\]
+Computer~1 is excluded because it is needed in either case. For D3 at Dell-configured
+prices, the ML upfront cost is about \$64K of hardware (street \$49K $\times$ 1.3) plus
+about \$14K of setup labor, or about \$78K, and the ML run cost is about \$1.25K/month
+(non-labor opex plus upkeep). If cloud spend reaches \$4K/month, break-even is about
+28 months. Averaged over 3 years the on-premises ML side costs about \$3.4K/month, so the
+cloud is cheaper if spend stays below that. For 20--30 users a compliant cloud LLM is
+therefore plausibly cheaper than D3 on usage cost alone unless usage is heavy. The case
+for on-premises rests on keeping CUI inside the boundary, training on the NAS archive
+without sending it off-site, no per-token cost growth, and the fact that Computer~1 is
+needed anyway. Usage profiling in the pilot should drive this choice.
+
+\ReportSubsection{Capability notes}
+\begin{itemize}
+  \item Open-weight models in 2026 handle most enterprise tasks (summarization,
+    extraction, drafting, scripting) well but may trail the best proprietary models on
+    the hardest reasoning and agentic tasks.
+  \item At this budget the largest practical models are about 120B parameters
+    (nodes with 96--192~GB) and a 4-bit 400B-class mixture of experts on a 4-GPU
+    node. Quantization lowers quality slightly; validate against real workflows.
+  \item Long-context quality degrades with length; use retrieval and chunking instead of
+    relying on raw 128K-token prompts for everything.
+\end{itemize}
+
+% ===========================================================================
+\ReportSection{Risk Assessment}
+
+\TableTitle{Risks (L = likelihood, I = impact: H/M/L)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{1.3} c c Y{1.8}@{}}
+  \toprule
+  Risk & L & I & Mitigation \\
+  \midrule
+  \endhead
+  Computer 1 is a single point of failure for the file share, license servers and the LLM application tier & M & H & RAID-Z2 with a hot spare, redundant PSUs, UPS, tested VM restore; second gateway on Node~B. No second server (sponsor decision). \\
+  RAID and snapshots share one machine with the data, so they do not protect against server loss, ransomware or site loss & M & H & Encrypted offline backup set rotated off-site (about \$2--4K), restore tested. \\
+  A fine-tuned model states wrong clause numbers or requirements with confidence & M & H & Retrieval with citations as the primary mechanism; evaluate adapters against known answers; human review of any use in deliverables. \\
+  Standards (for example NFPA~780) are copyrighted and the license may not allow AI indexing or training & M & M & Check license terms before ingesting; keep edition records. \\
+  A model trained on restricted folders is used by people without access & L & H & Per-group adapters; access-aware retrieval; train only on material open to all users of a model. \\
+  Autodesk or Bluebeam needs internet sign-in or cloud services outside the boundary & M & M & Verify licensing model and self-hosted options with the vendors before design freeze. \\
+  License vendor restricts virtualization or binds licenses to hardware & M & M & Confirm terms before design freeze; use a dedicated host if required. \\
+  Hardware must be TAA-compliant, raising cost 15--40\% & H & M & Confirm sourcing rules early; obtain OEM quotes alongside white-box. \\
+  Authorization (ATO) delays, now covering file share and private cloud as well as the LLM & M & H & Engage the ISSO/ISSM early; one boundary and SSP for both computers. \\
+  Fine-tuned models or embeddings inherit CUI sensitivity & M & M & Registry access control; include in backup and sanitization rules. \\
+  Training jobs interfere with serving (single-node configs) & M & M & Run off-hours or dedicate GPUs; prefer dual-node for heavy training. \\
+  Upkeep exceeds 3--4 hr/week during growth or after incidents & M & M & Named owner and backup person; configuration as code; scheduled maintenance windows. \\
+  Under-sizing as adoption grows & M & M & Quotas, queueing, instrumented pilot; add a GPU at 70\% sustained utilization. \\
+  GPU, RAM or disk supply and price volatility & M & M & Early quotes; accept equivalent parts. \\
+  Model license or provenance concern & L--M & H & Legal review; approved-model list. \\
+  Hallucination or misuse & H & M & Citations, human review, acceptable-use policy. \\
+  Data leakage between users & L & H & Per-group access control, per-tenant indexes, red-team tests. \\
+  Prompt injection through documents & M & M & Input sanitization; limited tool permissions; no autonomous external actions. \\
+  Facility power, cooling and noise & M & M & Machine-room site check; 208/240~V circuits. \\
+  \bottomrule
+\end{xltabular}}
+
+% ===========================================================================
+\ReportSection{Implementation Roadmap}
+
+\TableTitle{Phases}
+{\small
+\begin{xltabular}{\textwidth}{@{}Y{0.6}Y{1.8}Y{0.9}@{}}
+  \toprule
+  Phase & Activities & Output \\
+  \midrule
+  \endhead
+  0. Discovery & Confirm user counts, workflows, storage and license inventory, sourcing rules (TAA), model policy, facility, recovery targets. & Validated requirements. \\
+  1. Pilot and benchmark & Borrow or buy one ML node; benchmark 2--3 candidate models, an adapter fine-tune, and retrieval over a licensed standard such as NFPA~780 (non-sensitive) on representative prompts; test 12 simultaneous users; compare with the current tools. & Throughput, latency and quality data; configuration decision. \\
+  2. Procurement and ATO preparation & Quotes, purchase order, SSP, STIG baselines, model-import procedure, license-vendor confirmations. & Approved design. \\
+  3. Deploy Computer 1 and Node A & Install, harden, migrate file share and license servers, deploy gateway, retrieval and SSO; 20--40 pilot users. & Initial operating capability. \\
+  4. Add Node B (and GPUs) & Dedicated training node, failover test, rolling-upgrade procedure; add GPUs as utilization triggers fire. & Full operating capability. \\
+  5. Sustain & Quarterly model refresh, security review, restore test, usage reporting. & Continuous improvement. \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Expansion triggers:} sustained GPU utilization above 70\%, 95th-percentile time to first token above target,
+or queue wait above 10~s. \textbf{Failover test:} run before production use and
+after every major change.
+
+% ===========================================================================
+\ReportSection[sec:open]{Decision Requested and Open Items}
+
+\textbf{Decision requested.} Approve configuration D3 (about \$64K of hardware at street
+prices, about \$83K Dell-configured) plus integration effort to proceed with Phases 0--4.
+Funding may be staged: Computer~1 and Node~A first, Node~B after the pilot confirms
+demand and the training workload. If failover at the full 12 users is required, plan
+Node~B with 2 GPUs (D4).
+
+\textbf{Open items}
+\begin{enumerate}
+  \item Expected growth in named users beyond 20, and the workflow inventory by department.
+  \item Autodesk and Bluebeam: which products, whether licenses are named-user or network,
+    whether the enclave allows vendor sign-in, and which server components are needed
+    (Section~\ref{sec:licenses}).
+  \item Archive size, file formats (scanned PDFs, Office files, DWG/Revit, Bluebeam
+    markups), folder and permission structure, and which documents to ingest first (for
+    example NFPA~780, with license terms for AI use).
+  \item Whether an offline backup copy is wanted in addition to disk redundancy inside
+    Computer~1.
+  \item Recovery targets (RTO/RPO) for the LLM service and for the license servers and file share.
+  \item Type and size of training workloads (adapter fine-tuning, embeddings, small custom models).
+  \item CUI categories in scope, including export-controlled data; contract restrictions.
+  \item Dell quotes for Computer~1 and each node configuration; which models support the
+    chosen GPUs; support level (Section~\ref{sec:dell}).
+  \item Policy on open-weight models and model origin; whether cloud CUI processing is allowed.
+  \item Facility readiness: power, cooling, noise, physical access.
+  \item Who operates both computers and how much time they can dedicate.
+  \item Approved marking text and handling rules for this document set.
+  \item Funding profile and procurement vehicle; at least two vendor quotes per configuration.
+  \item Server operating-system standard: Windows Server with Hyper-V and Active Directory,
+    or Linux with KVM (affects Autodesk/Bluebeam hosting and file-share permissions).
+  \item Failover target: is 3--8 users acceptable while Node~A is down, or must 12 be
+    supported (Node~B with 2 GPUs)? Is Node~B expected to act as a second serving node?
+  \item Which cloud fallback option(s) in Section~\ref{sec:fallback} to refine.
+\end{enumerate}
+
+% ===========================================================================
+\ReportSection{Glossary and References}
+
+\textbf{CUI} Controlled Unclassified Information. \textbf{NAS} network-attached storage.
+\textbf{RAG} retrieval-augmented generation. \textbf{KV cache} attention key/value memory
+per token. \textbf{LoRA/QLoRA} low-rank adapter fine-tuning (quantized base for QLoRA).
+\textbf{ATO} Authority to Operate. \textbf{SSP} System Security Plan.
+\textbf{TAA} Trade Agreements Act. \textbf{RTO/RPO} recovery time and recovery point
+objectives. \textbf{HBA} host bus adapter. \textbf{FIPS} Federal Information Processing
+Standard. \textbf{STIG} Security Technical Implementation Guide.
+
+\textbf{Reference topics to cite in the final report (verify current versions):}
+NIST SP 800-171 (Rev~2/3), 800-171A, 800-53; NIST AI RMF 1.0; 32~CFR Part~2002;
+DFARS 252.204-7012; CMMC (32~CFR Part~170); NDAA Section~889; Trade Agreements Act;
+vendor datasheets for the selected GPUs, servers and storage; model cards and licenses
+for each candidate model; vLLM and SGLang documentation.
+
+\end{document}

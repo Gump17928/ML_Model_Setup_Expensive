@@ -1,0 +1,135 @@
+% report-components.sty
+% Static (non-fillable) report components that sit on top of the shared
+% engineering intake style (intake-style.sty): numbered sections, numbered
+% table/figure titles, document-control block, callout note, and list/table
+% defaults. Load AFTER intake-style:
+%
+%   \usepackage{../../engineering-intake-templates/shared/intake-style}
+%   \usepackage{../../shared/report-components}
+%
+% Do not put document-specific content here.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{report-components}[2026/10/22 v0.1 Static report components]
+
+\RequirePackage{amsmath}
+\RequirePackage{tabularx}
+\RequirePackage{xltabular}
+\RequirePackage{enumitem}
+\RequirePackage{needspace}
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
+
+\setlength{\emergencystretch}{2em}
+
+% Proportional stretch column (same definition as form-components.sty).
+\newcolumntype{Y}[1]{>{\hsize=#1\hsize\linewidth=\hsize\raggedright\arraybackslash}X}
+
+% Tight list spacing to match the zero-indent / small-parskip page style.
+\setlist{itemsep=1pt, topsep=2pt, parsep=0pt, partopsep=0pt, leftmargin=1.6em}
+
+% Placeholder text that still needs a real value.
+\newcommand{\PH}[1]{\textit{[#1]}}
+
+% ---------------------------------------------------------------------------
+% Numbered section / subsection headings (same look as \IntakeSection:
+% size and a thin rule, no bold), with optional label and a TOC entry.
+%   \ReportSection[label]{Title}
+%   \ReportSubsection[label]{Title}
+% ---------------------------------------------------------------------------
+\newcommand{\ReportSection}[2][]{%
+  \needspace{6\baselineskip}%
+  \refstepcounter{section}%
+  \phantomsection
+  \ifstrempty{#1}{}{\label{#1}}%
+  \addcontentsline{toc}{section}{\protect\numberline{\thesection}#2}%
+  \vspace{10pt}%
+  {\large \thesection\quad #2}\\[-4pt]
+  \hrule
+  \vspace{6pt}%
+}
+
+\newcommand{\ReportSubsection}[2][]{%
+  \needspace{4\baselineskip}%
+  \refstepcounter{subsection}%
+  \phantomsection
+  \ifstrempty{#1}{}{\label{#1}}%
+  \addcontentsline{toc}{subsection}{\protect\numberline{\thesubsection}#2}%
+  \vspace{6pt}%
+  {\normalsize\itshape \thesubsection\quad #2}\par
+  \vspace{2pt}%
+}
+
+% ---------------------------------------------------------------------------
+% Numbered table and figure titles (placed above the table/figure).
+%   \TableTitle[label]{Title}     \FigureTitle[label]{Title}
+% ---------------------------------------------------------------------------
+\newcounter{rtable}
+\newcounter{rfigure}
+
+\newcommand{\TableTitle}[2][]{%
+  \needspace{5\baselineskip}%
+  \refstepcounter{rtable}\phantomsection
+  \ifstrempty{#1}{}{\label{#1}}%
+  \par\vspace{4pt}{\small\itshape Table~\thertable.\ #2}\par\vspace{2pt}\nopagebreak
+}
+
+\newcommand{\FigureTitle}[2][]{%
+  \needspace{8\baselineskip}%
+  \refstepcounter{rfigure}\phantomsection
+  \ifstrempty{#1}{}{\label{#1}}%
+  \par\vspace{4pt}{\small\itshape Figure~\therfigure.\ #2}\par\vspace{2pt}\nopagebreak
+}
+
+% ---------------------------------------------------------------------------
+% Callout note: thin rule above and below, italic title.
+% ---------------------------------------------------------------------------
+\newenvironment{ReportNote}[1]{%
+  \par\vspace{4pt}\noindent
+  \begin{minipage}{\textwidth}
+    \hrule\vspace{4pt}%
+    {\small\itshape #1}\par\vspace{1pt}\small
+}{%
+    \par\vspace{2pt}\hrule
+  \end{minipage}\par\vspace{4pt}
+}
+
+% ---------------------------------------------------------------------------
+% Static document-control block (report equivalent of the fillable block in
+% form-components.sty). Place right after \CoverPage.
+%   \ReportControlBlock{Status}{Revision}{Revision date}{Prepared by}
+%                      {Linked reference}{Distribution}
+% followed by \RevisionHistory{rows} where each row is
+%   Rev & Author & Date & Change summary \\
+% ---------------------------------------------------------------------------
+\newcommand{\ReportControlBlock}[6]{%
+  \IntakeSection{Document Control}
+  \Guidance{Update this block each time the report is revised. The document ID
+  and version are maintainer-controlled; status and revision describe this
+  particular copy.}\\[4pt]
+  {\small
+  \begin{tabularx}{\textwidth}{XXX}
+    \toprule
+    \Guidance{Status} & \Guidance{Current revision} & \Guidance{Revision date} \\
+    #1 & #2 & #3 \\[6pt]
+    \Guidance{Prepared by} & \Guidance{Linked reference} & \Guidance{Distribution} \\
+    #4 & #5 & #6 \\
+    \bottomrule
+  \end{tabularx}}
+  \vspace{6pt}
+}
+
+\newcommand{\RevisionHistory}[1]{%
+  \Guidance{Revision history -- add a row each time the report changes.}\\[4pt]
+  {\small
+  \begin{tabularx}{\textwidth}{Y{0.10}Y{0.22}Y{0.16}Y{0.52}}
+    \toprule
+    Rev. & Author & Date & Change Summary \\
+    \midrule
+    #1
+    \bottomrule
+  \end{tabularx}}
+  \vspace{4pt}
+}
+
+\endinput
