@@ -13,6 +13,7 @@
 \ProvidesPackage{report-components}[2026/10/22 v0.1 Static report components]
 
 \RequirePackage{amsmath}
+\RequirePackage{amssymb}
 \RequirePackage{tabularx}
 \RequirePackage{xltabular}
 \RequirePackage{enumitem}
@@ -22,7 +23,9 @@
 
 \setlength{\emergencystretch}{2em}
 
-% Proportional stretch column (same definition as form-components.sty).
+% Proportional stretch column (same definition as form-components.sty). The Y weights
+% in one table must add up to the number of Y columns, or the table will not fill
+% \textwidth (too narrow if the sum is lower, past the margin if higher).
 \newcolumntype{Y}[1]{>{\hsize=#1\hsize\linewidth=\hsize\raggedright\arraybackslash}X}
 
 % Tight list spacing to match the zero-indent / small-parskip page style.
@@ -131,5 +134,13 @@
   \end{tabularx}}
   \vspace{4pt}
 }
+
+% ---------------------------------------------------------------------------
+% Release-checklist anchors and links (front-matter "Items To Complete" list).
+%   \TodoAnchor{key}       invisible link target, placed where an open item lives
+%   \TodoLink{key}{text}   underlined internal link followed by the page number
+% ---------------------------------------------------------------------------
+\newcommand{\TodoAnchor}[1]{\phantomsection\label{todo:#1}}
+\newcommand{\TodoLink}[2]{\hyperref[todo:#1]{\underline{#2}}~(p.~\pageref{todo:#1})}
 
 \endinput

@@ -1,0 +1,37 @@
+% ===========================================================================
+\ReportSection[sec:open]{Decision Requested and Open Items}
+\TodoAnchor{aoa-open}
+
+\textbf{Decision requested.} Approve configuration D3 (about \$64K of hardware at street
+prices, about \$83K Dell-configured) plus integration effort to proceed with Phases 0--4.
+Funding may be staged: Computer~1 and Node~A first, Node~B after the pilot confirms
+demand and the training workload. If failover at the full 12 users is required, plan
+Node~B with 2 GPUs (D4).
+
+\textbf{Open items}
+\begin{enumerate}
+  \item Expected growth in named users beyond 20, and the workflow inventory by department.
+  \item Autodesk and Bluebeam: which products, whether licenses are named-user or network,
+    whether the enclave allows vendor sign-in, and which server components are needed
+    (Section~\ref{sec:licenses}).
+  \item Archive size, file formats (scanned PDFs, Office files, DWG/Revit, Bluebeam
+    markups), folder and permission structure, and which documents to ingest first (for
+    example NFPA~780, with license terms for AI use).
+  \item Whether an offline backup copy is wanted in addition to disk redundancy inside
+    Computer~1.
+  \item Recovery targets (RTO/RPO) for the LLM service and for the license servers and file share.
+  \item Type and size of training workloads (adapter fine-tuning, embeddings, small custom models).
+  \item CUI categories in scope, including export-controlled data; contract restrictions.
+  \item Dell quotes for Computer~1 and each node configuration; which models support the
+    chosen GPUs; support level (Section~\ref{sec:dell}).
+  \item Policy on open-weight models and model origin; whether cloud CUI processing is allowed.
+  \item Facility readiness: power, cooling, noise, physical access.
+  \item Who operates both computers and how much time they can dedicate.
+  \item Approved marking text and handling rules for this document set.
+  \item Funding profile and procurement vehicle; at least two vendor quotes per configuration.
+  \item Server operating-system standard: Windows Server with Hyper-V and Active Directory,
+    or Linux with KVM (affects Autodesk/Bluebeam hosting and file-share permissions).
+  \item Failover target: is 3--8 users acceptable while Node~A is down, or must 12 be
+    supported (Node~B with 2 GPUs)? Is Node~B expected to act as a second serving node?
+  \item Which cloud fallback option(s) in Section~\ref{sec:fallback} to refine.
+\end{enumerate}

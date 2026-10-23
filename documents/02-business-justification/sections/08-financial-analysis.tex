@@ -1,0 +1,113 @@
+% ===========================================================================
+\ReportSection[sec:fin]{Financial Analysis}
+
+\ReportSubsection{Method}
+\[
+  \text{Annual benefit} = N_{\text{active}} \times H \times W \times R \times E
+\]
+where $N_{\text{active}}$ is the number of regular active users, $H$ the hours saved
+per user per week, $W$ the working weeks per year (about 46), $R$ the labor rate
+(\$48.08/hr) and $E$ a realization factor (the fraction of saved time turned into
+useful work; use 0.5--0.7).
+\[
+  \text{ROI} = \frac{\text{3-yr benefit} - \text{3-yr cost}}{\text{3-yr cost}}
+  \qquad
+  \text{Payback (months)} = \frac{\text{Upfront cost}}{\text{Net annual benefit}/12}
+\]
+Cost for the scenarios below is the ML side, which is the increment that depends on
+the LLM decision; the last column also attributes Computer~1 to the project.
+
+\ReportSubsection{Illustrative scenarios (all inputs are placeholders)}
+\TodoAnchor{bj-scen}
+
+\TableTitle[tbl:scen]{Scenarios}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{1.2} Y{0.95} Y{0.95} Y{0.95} Y{0.95}@{}}
+  \toprule
+  & Conservative (D3) & Expected (D3) & Optimistic (D4) & Expected, with Computer~1 \\
+  \midrule
+  \endhead
+  Active users $N$ & 20 & 30 & 50 & 30 \\
+  Hours saved per user per week $H$ & 1.0 & 2.0 & 3.0 & 2.0 \\
+  Working weeks $W$ & 46 & 46 & 46 & 46 \\
+  Labor rate $R$ & \$48.08 & \$48.08 & \$48.08 & \$48.08 \\
+  Realization $E$ & 0.5 & 0.6 & 0.7 & 0.6 \\
+  \textbf{Annual benefit} & \textbf{\$22K} & \textbf{\$80K} & \textbf{\$232K} & \textbf{\$80K} \\
+  Annual run cost & \$17K & \$15K & \$16.5K & \$19.3K \\
+  Upfront cost (Dell-configured) & \$99K & \$78K & \$91K & \$104K \\
+  \textbf{Net annual benefit} & \textbf{\$5K} & \textbf{\$65K} & \textbf{\$216K} & \textbf{\$60K} \\
+  \textbf{Payback} & not within 3 years (about 19 years) & \textbf{about 15 months} & about 5 months & about 21 months \\
+  \textbf{3-year ROI} & about $-$56\% & \textbf{about 94\%} & about 395\% & about 48\% \\
+  \bottomrule
+\end{xltabular}}
+
+\begin{ReportNote}{Reading the scenarios}
+With only the minimum 20 users each saving 1~hour a week, time savings alone do not
+repay the ML cost (conservative column, which also uses the high end of hardware and
+setup costs); the case then rests on the capability and risk arguments
+(Section~\ref{sec:benefits}). The optimistic case (50 named users, about 30 at once) needs
+D4 with both nodes serving and is unlikely as a planning basis. Productivity savings are
+often not budget-recoverable ``cash''; present them as \emph{capacity gained} (more
+throughput without added headcount) unless a headcount or contract-cost effect can be
+shown. Answering from archived standards and past projects may change how much time each
+user saves; this is not measured here, and the pilot should measure it.
+\end{ReportNote}
+
+\ReportSubsection{Sensitivity and break-even}
+\begin{itemize}
+  \item \textbf{Biggest driver:} hours saved per user per week. In the expected case,
+    each additional 0.5~hr/week across 30 users is worth about \textbf{\$20K per year}.
+  \item \textbf{Break-even on run cost:} the ML run cost (\$15K/yr) is recovered with
+    about \textbf{11 hours per week} of gross time saved across all users (about 22
+    minutes per user for 30 users).
+  \item \textbf{Break-even on 3-year cost:} recovering the full 3-year ML cost (\$123K)
+    needs about \textbf{31 hours per week} (about 1~hour per user for 30 users); with
+    Computer~1 attributed (\$162K), about \textbf{41 hours per week} (at $E = 0.6$).
+  \item \textbf{Adoption:} benefits scale with \emph{active} users; plan training and
+    champions.
+  \item \textbf{Upkeep:} doubling upkeep adds about \$7.5K/yr for D3; upkeep will rise
+    during growth phases (adding GPUs, model changes, authorization re-reviews).
+  \item \textbf{Utilization:} monitor GPU load; add a GPU at 70\% sustained utilization.
+\end{itemize}
+
+\ReportSubsection[sec:node-b]{Is the second ML node worth it?}
+\TodoAnchor{bj-nodeb}
+
+Node~B (the difference between S2 and D3) adds about \$20K of hardware at street prices
+(about \$26K Dell-configured), 40--80 hours of setup, about 1~hr/week of upkeep and
+\$2--3.5K/yr of operating cost: roughly \textbf{\$41--48K over 3 years}.
+
+In the expected case a full day of LLM downtime loses about \$350 of realized benefit
+(30 users $\times$ 2~hr/week $\div$ 5 days $\times$ \$48.08 $\times$ 0.6). Failover alone
+would therefore take well over 100 avoided outage days to pay for itself. The case for
+Node~B rests on its stated main use, training alongside serving, which the productivity
+model does not value: archive ingestion, OCR, embedding and fine-tuning can run during
+the day without taking GPUs from users. On S2 (2 GPUs, about \$57K Dell-configured),
+training during working hours would take a GPU away and leave serving at about 3--8
+users, below the stated 12, so training would have to be scheduled off-hours. Node~B can
+also act as a second serving node when idle. \PH{Confirm the training workload and the
+required recovery time; see Section~\ref{sec:open}.}
+
+\ReportSubsection{Comparison of paths (3-year view)}
+
+\TableTitle{Options compared}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{1.25} Y{0.909} Y{0.795} Y{0.682} Y{1.364}@{}}
+  \toprule
+  Option & 3-yr cost (est.) & Meets context and function need & CUI control & Comment \\
+  \midrule
+  \endhead
+  Continue status quo & \$\PH{license} & No & Existing & Capability gap persists; shadow-AI risk; no storage or license consolidation. \\
+  Upgrade or expand current tools & \$\PH{quote} & Unknown, unlikely & Existing & Ask vendors about context, API and retrieval roadmap. \\
+  Compliant cloud LLM $+$ Computer~1 & \$0.07--0.44M (cloud \$0.03--0.4M, usage-driven, $+$ Computer~1 about \$38K) & Yes & Moderate (contract and boundary dependent) & Cost scales with long-context use; data leaves the site; training on the archive would also leave the site. \\
+  Computer~1 + S1 (one 1-GPU node) & \$81--121K & Below the stated 12 simultaneous users & Highest & Proof of concept; no failover. \\
+  Computer~1 + S2 (one 2-GPU node) & \$94--140K & Yes (training only off-hours) & Highest & No failover. \\
+  \textbf{Computer~1 + D3 (recommended)} & \textbf{\$131--192K (ML only about \$98--145K)} & \textbf{Yes} & \textbf{Highest} & Training node that can also serve; reduced-capacity failover. \\
+  Computer~1 + D4 & \$144--211K & Yes (more users) & Highest & Full-capacity failover; both nodes can serve. \\
+  \bottomrule
+\end{xltabular}}
+Break-even against a cloud LLM depends on usage: with D3 ML upfront of about \$78K (Dell-configured) and an ML run cost of about \$1.25K/month, cloud spend of \$4K/month breaks even in about
+28 months, and the cloud is cheaper if spend stays below about \$3.4K/month (ENG-RPT-01,
+Section~\ref{sec:comparison}). For 20--30 users, cloud usage cost alone may be lower; the
+on-premises case rests on keeping CUI and the archive inside the boundary, training on
+the archive, no per-token cost growth, and the need for Computer~1 in any case.

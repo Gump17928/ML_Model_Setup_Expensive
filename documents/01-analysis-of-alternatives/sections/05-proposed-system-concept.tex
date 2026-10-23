@@ -1,0 +1,281 @@
+% ===========================================================================
+\ReportSection[sec:concept]{Proposed System Concept}
+
+\ReportSubsection{Two-computer architecture}
+
+\FigureTitle[fig:arch]{Logical architecture: Computer~1 (NAS and private cloud) and Computer~2 (ML nodes)}
+\begin{center}
+\begin{tikzpicture}[
+  svc/.style={draw, rounded corners=1.5pt, font=\scriptsize, align=center,
+              minimum height=0.8cm, minimum width=3.4cm, inner sep=2pt},
+  host/.style={draw, rounded corners=3pt, inner sep=7pt},
+  lbl/.style={font=\small\itshape},
+  arr/.style={-{Stealth[length=2mm]}, thick},
+  darr/.style={-{Stealth[length=2mm]}, thick, dashed},
+  bi/.style={{Stealth[length=2mm]}-{Stealth[length=2mm]}, thick}
+]
+\node[svc, minimum width=2.4cm] (users) at (0,-1) {Users:\\browser, IDE,\\scripts};
+\node[svc] (gw)  at (5.2,-1) {LLM gateway, chat UI,\\retrieval service};
+\node[svc] (vdb) at (5.2,-2.2) {Vector database,\\model and artifact registry};
+\node[svc] (fs)  at (5.2,-3.4) {File share (SMB/NFS),\\snapshots, backups};
+\node[svc] (lic) at (5.2,-4.6) {License servers,\\private-cloud VMs};
+\begin{scope}[on background layer]
+  \node[host, fit=(gw)(vdb)(fs)(lic), label={[lbl]above:Computer 1: NAS / private cloud}] (c1) {};
+\end{scope}
+\node[svc, minimum width=4.2cm, minimum height=1.3cm] (na) at (12.7,-1) {ML Node A (primary)\\serving: inference,\\embeddings, reranker};
+\node[svc, minimum width=4.2cm, minimum height=1.3cm] (nb) at (12.7,-3.4) {ML Node B (secondary)\\fine-tuning, experiments;\\standby for Node A};
+\node[lbl, above=0.15cm of na] {Computer 2: ML nodes};
+\draw[arr] (users) -- (gw);
+\draw[arr] (gw.east) -- node[above, font=\scriptsize]{inference API} (na.west);
+\draw[darr] (gw.east) ++(0.5,0) |- node[pos=0.25, right, font=\scriptsize]{failover} ([yshift=0.35cm]nb.west);
+\draw[bi] (fs.east) -- node[below, font=\scriptsize]{datasets, checkpoints, backups} (nb.west |- fs.east);
+\end{tikzpicture}
+\end{center}
+{\footnotesize Every node mounts the NAS over the storage network and keeps its own
+local copy of the approved models, so serving continues if Computer~1 is
+briefly unavailable. A second gateway instance can run on Node~B (Section~\ref{sec:resil}).}
+
+\ReportSubsection{Computer 1: roles}
+\begin{itemize}
+  \item \textbf{File and data services:} SMB share with Active Directory or
+    Kerberos authentication, NFS exports to the ML nodes, snapshot schedule,
+    quotas and an encrypted backup target.
+  \item \textbf{License servers:} hosted in virtual machines or on the host.
+    \emph{Check each vendor's terms}: some license managers are bound to a
+    hardware or MAC address and may restrict virtualization.
+  \item \textbf{Private cloud:} a hypervisor (for example Proxmox or KVM on a
+    FIPS-capable Linux) running the specific software \PH{list}, each in its
+    own virtual machine or container, with snapshots and backup.
+  \item \textbf{LLM application tier:} gateway, chat interface, retrieval
+    service, vector database, model and artifact registry, observability.
+\end{itemize}
+
+\ReportSubsection[sec:licenses]{Hosting Autodesk and Bluebeam}
+\TodoAnchor{aoa-licenses}
+
+The stated software to host is Autodesk products and Bluebeam. These need to be checked
+with the vendors or reseller before the Computer~1 design is frozen; the points below are
+the questions to ask, not confirmed facts.
+
+\TableTitle{Autodesk and Bluebeam: what to verify}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.636} Y{1.364} Y{1.0}@{}}
+  \toprule
+  Topic & Question & Why it matters \\
+  \midrule
+  \endhead
+  Licensing model & Are the licenses named-user subscriptions that sign in through the vendor's cloud, or network (floating) licenses served from a local license manager? (Autodesk and Bluebeam have largely moved to named-user subscriptions; legacy agreements may still use a local license manager.) & If named-user, a local license server may not be needed; if network, the license manager runs on Computer~1. \\
+  Internet sign-in & Does the product need periodic internet check-in or sign-in? & An enclave or air-gapped network may not allow it. \\
+  Data and collaboration services & Which services are needed (for example Autodesk Vault for data management, Bluebeam collaboration)? Is a self-hosted option available and authorized for CUI? & Cloud versions sit outside the CUI boundary unless authorized. \\
+  Server platform & Do the server components require Windows Server and SQL Server? & Adds Windows Server, database and client-access licensing, and may favor a Hyper-V host. \\
+  Virtualization and hardware binding & Does the vendor support running the license manager in a virtual machine, and is it bound to a host ID or MAC address? & May require a fixed virtual MAC or a dedicated host. \\
+  \bottomrule
+\end{xltabular}}
+
+\ReportSubsection{Computer 2: ML nodes and workloads}
+
+\TableTitle{How each node is used}
+{\small
+\begin{tabularx}{\textwidth}{@{}Y{0.778}Y{1.111}Y{1.111}@{}}
+  \toprule
+  & Single-node configs & Dual-node configs \\
+  \midrule
+  Serving & Node serves all users. & Node~A serves; Node~B is warm standby. \\
+  Fine-tuning & Time-shared with serving (off-hours) or on a separate GPU if the node has two or more. & Runs on Node~B concurrently with serving on Node~A. \\
+  Experiments and evaluation & Same as fine-tuning. & Node~B; does not disturb production latency. \\
+  Failure of the node & Service down until repaired or the cloud fallback is used. & Gateway routes to Node~B; training pauses until Node~A returns. \\
+  Maintenance (patching, driver or model upgrades) & Planned downtime. & Rolling: patch Node~B first, then switch and patch Node~A. \\
+  \bottomrule
+\end{tabularx}}
+
+A dual-node design is worth its extra cost mainly for three reasons: (1)
+training cannot degrade user-facing latency, (2) there is a failover path, and
+(3) upgrades can be tested on Node~B before production sees them. A single
+node with two or more GPUs can also train and serve at the same time by
+dedicating GPUs to each, but it shares one failure domain and one power supply.
+
+\ReportSubsection[sec:archive]{Archive knowledge: retrieval and fine-tuning}
+
+Archived project data on the NAS should be usable by the model. Two techniques do
+different jobs, and the design uses both.
+
+\TableTitle{Retrieval versus fine-tuning for archive knowledge}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.632} Y{1.158} Y{1.053} Y{1.157}@{}}
+  \toprule
+  Technique & What it does & Strengths & Limits \\
+  \midrule
+  \endhead
+  Retrieval (index the documents) & Splits documents into passages, stores them in a searchable index, and gives the model the best-matching passages with each question. & Quotes exact wording and cites document, clause and page; new files are usable as soon as they are indexed; follows NAS permissions; no training time. & Answer quality depends on finding the right passages; limited by the context size per question. \\
+  Fine-tuning (train an adapter) & Adjusts the model using example questions and answers or documents. & Learns vocabulary, formats and how to do tasks (for example draft an inspection checklist in the house format); shorter prompts. & Does not reliably memorize a document and can state wrong clause numbers with confidence; content is hard to update or remove; must be re-tested after each change; the resulting weights are CUI. \\
+  \bottomrule
+\end{xltabular}}
+
+Giving the model a PDF and training on it will not by itself make it a dependable
+expert. For a standard such as NFPA~780, where exact wording matters, \textbf{retrieval
+with citations is the primary mechanism}; fine-tuning on reviewed examples teaches the
+model how to use and reason about the material. A fine-tuned adapter is deployed only
+if it measurably beats retrieval alone.
+
+\textbf{Example workflow: NFPA~780.}
+\begin{enumerate}
+  \item Place the licensed PDF in a controlled library folder on the NAS with the intended
+    access groups.
+  \item An ingestion job (run on Node~B or on CPU) extracts text and tables, applies optical
+    character recognition to scanned pages, splits by section and clause, creates
+    embeddings, and stores them in the vector database with edition and access metadata.
+  \item Users ask questions; the model answers with citations to clause and page.
+  \item Optional training: example questions, answers and tasks are generated from the
+    document and reviewed by an engineer; an adapter is trained on Node~B; it is evaluated
+    against a held-out set of questions with known answers and compared with retrieval alone.
+  \item When a new edition is issued, re-ingest it with the edition recorded so that old and
+    new requirements are not mixed.
+\end{enumerate}
+
+\TodoAnchor{aoa-nfpa}
+\textbf{Points to resolve.}
+\begin{itemize}
+  \item \textbf{Formats.} Text-based and scanned documents work. CAD and drawing files (for
+    example DWG or Revit) are not text; in the base plan only titles, annotations and
+    metadata can be extracted. Reading drawings visually needs a vision model that is not
+    budgeted here.
+  \item \textbf{Publisher licenses.} Standards such as NFPA~780 are copyrighted. Confirm that
+    the license allows internal indexing and AI training.
+  \item \textbf{Access control.} Retrieval must respect NAS permissions. A model trained on a
+    restricted folder must not be available to people without access, so train separate
+    adapters per access group, or train only on material open to all users of that model.
+  \item \textbf{Derived data.} Indexes, embeddings and adapters built from CUI are treated as
+    CUI and covered by backup and sanitization rules.
+  \item \textbf{Effort.} Ingestion, OCR and training run on Node~B and store results on
+    Computer~1; archive size and formats (open item) set the effort.
+\end{itemize}
+
+\ReportSubsection[sec:nodeb]{Node B operating modes}
+\TodoAnchor{aoa-nodeb}
+
+Training alongside serving is the main use of Node~B. Because it is the same class of
+machine as Node~A, it can also run a copy of the serving model. This is an option within
+the design, not a fixed decision.
+
+\TableTitle{Node B modes}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.656} Y{1.031} Y{1.313}@{}}
+  \toprule
+  Mode & When & Effect on capacity \\
+  \midrule
+  \endhead
+  1. Training (default) & Fine-tuning, document ingestion, OCR and evaluation jobs run on Node~B. & Node~A serves users alone, so capacity is Node~A's. \\
+  2. Second serving node & No training job is running; Node~B loads the same model and the gateway shares the load. & Adds about 3--8 simultaneous users (1 GPU) or 8--20 (2 GPUs). Training jobs take priority: the gateway drains Node~B sessions before a job starts. \\
+  3. Failover & Node~A is unavailable. & Node~B serves alone at its own capacity (3--8 users with 1 GPU); training is paused. \\
+  \bottomrule
+\end{xltabular}}
+
+A 1-GPU Node~B cannot train and serve at the same time: one 96~GB GPU holds either the
+serving model with its cache (about 63~GB plus cache) or a training job (about 20--90~GB).
+A 2-GPU Node~B (D4) can do one of each. Training jobs should save checkpoints often so
+they can be paused for failover or for serving. A job queue (for example Slurm or
+Kubernetes with priority classes) enforces the policy; a typical policy is training at
+night and on weekends, and serving on Node~B during working hours when it is idle.
+
+\ReportSubsection{Software stack (self-hosted, no outbound connectivity)}
+
+\TableTitle{Software layers}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.231} Y{0.769}@{}}
+  \toprule
+  Layer & Candidates & Purpose \\
+  \midrule
+  \endhead
+  OS and virtualization & RHEL, Rocky or Ubuntu Pro in FIPS mode with STIG hardening; KVM/Proxmox; Docker or k3s & Hardened base; private cloud. \\
+  Storage & ZFS (RAID-Z2) or equivalent, SMB/NFS, snapshot and replication tooling & File share, backups, datasets. \\
+  Inference engine & vLLM or SGLang (TensorRT-LLM optional) & Continuous batching, paged KV cache, prefix caching. \\
+  Training tools & PEFT/LoRA frameworks, experiment tracking (e.g., MLflow) & Adapter fine-tuning, evaluation. \\
+  Gateway & LiteLLM or NGINX with OIDC, health checks, optional keepalived virtual IP & OpenAI-compatible API, quotas, failover routing. \\
+  User interface & Open WebUI or similar & Chat, uploads, shared prompts. \\
+  Retrieval & Open embedding model and reranker; pgvector or Qdrant & Cited answers with access-control enforcement. \\
+  Document ingestion & PDF and Office text extraction, OCR for scanned pages, embedding model & Turn NAS archive content into searchable passages. \\
+  Observability & Prometheus, Grafana, DCGM exporter, log forwarding to SIEM & Utilization, latency, audit. \\
+  Configuration management & Ansible or similar, stored in the NAS git server & Identical node builds; fast rebuild. \\
+  \bottomrule
+\end{xltabular}}
+
+\ReportSubsection{Model selection approach}
+Use a portfolio sized to the node:
+
+\TableTitle{Model roles and memory}
+{\small
+\begin{xltabular}{\textwidth}{@{}Y{0.844}Y{1.5}Y{0.656}@{}}
+  \toprule
+  Role & Candidate classes (verify versions, licenses, provenance) & Weights memory \\
+  \midrule
+  \endhead
+  General assistant & OpenAI gpt-oss-120b (mixture of experts, Apache 2.0, about 5B active parameters) & about 63~GB (4-bit) \\
+  Mid-size general or coding & Llama 3.x 70B, Gemma 27B, Mistral Small/Medium class, NVIDIA Nemotron & 15--40~GB (4-bit) to 70~GB (FP8) \\
+  Large mixture of experts (4-GPU node only) & Llama 4 Maverick-class (about 400B total) at 4-bit & about 200--220~GB \\
+  Embeddings and reranker & Small open models & 1--4~GB \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Provenance policy.} This report assumes U.S. or allied-origin models
+only; many organizations prohibit models from foreign-adversary developers on
+government-related systems regardless of license. Download on an internet-connected
+system, scan, hash-verify, store as \texttt{safetensors} (no pickle files), and
+import through the approved transfer process. Legal review of each license is
+required. Mixture-of-experts models are well suited to this budget: few active
+parameters per token mean one 96~GB GPU can serve several users quickly, and
+the cache memory per token is small.
+
+\ReportSubsection{How multiple users share the system}
+\begin{enumerate}
+  \item \textbf{Continuous batching:} the inference engine interleaves many users'
+    requests token by token, so one loaded model serves everyone at once.
+  \item \textbf{Paged KV cache:} each active conversation uses GPU memory in
+    proportion to its context length; memory is usually the limit for long
+    context (Section~\ref{sec:sizing}).
+  \item \textbf{Prefix caching:} shared system prompts and repeated documents are cached.
+  \item \textbf{Quotas and priority:} the gateway enforces per-user and per-team token
+    budgets and prioritizes interactive use over batch jobs.
+  \item \textbf{Isolation:} conversations and retrieval indexes are partitioned by
+    user and group; logging is per user.
+  \item \textbf{Batch queue:} large offline jobs run off-peak.
+\end{enumerate}
+
+\ReportSubsection[sec:resil]{Resilience, backup and multi-node growth}
+
+\TableTitle{Failure modes and responses}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.8}Y{1.0}Y{1.0}Y{1.2}@{}}
+  \toprule
+  Failure & Single-node configs & Dual-node configs & Mitigation \\
+  \midrule
+  \endhead
+  ML node A down & LLM unavailable. & Gateway fails over to Node~B; training paused. & Health checks; models staged locally on both nodes; documented switchover. \\
+  ML node B down & Not applicable. & No user impact; no failover or training until repaired. & Spare parts; warranty. \\
+  One GPU fails & Node continues with fewer GPUs if the model fits; otherwise down. & Same, plus failover. & Keep one cold-spare GPU if the budget allows. \\
+  Computer 1 (NAS) down & File share, license servers, private cloud and the gateway/retrieval tier are down. & Same for NAS services; LLM serving continues if a second gateway runs on Node~B (retrieval corpus unavailable). & Redundant PSUs, RAID-Z2, UPS; VM backups; tested restore; optional replica (Section~\ref{sec:hw}). \\
+  Disk failure on NAS & Array degraded but online. & Same. & RAID-Z2 tolerates two disks; hot spare or fast replacement. \\
+  Power loss & All down. & All down. & UPS with graceful shutdown; generator if mission-critical. \\
+  Bad model or software update & Rollback only. & Test on Node~B first. & Versioned registry; configuration as code. \\
+  Site loss (fire, flood) & Data loss unless backed up elsewhere. & Same. & Encrypted offline or off-site copy of backups within the CUI boundary. \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Growth path (multi-node).}
+\begin{itemize}
+  \item \textbf{Same build, more nodes.} Every ML node uses the same chassis class,
+    operating-system image and configuration, so a third or fourth node is another
+    copy. The storage switch has spare 25~GbE ports, and the gateway load-balances
+    across any number of nodes.
+  \item \textbf{Scale out by replicas.} More nodes serve more simultaneous users
+    (each node holds a full copy of the model) or run more training jobs in
+    parallel. Add GPUs inside a node (about \$9K each) before adding a node.
+  \item \textbf{Limits.} These PCIe-based workstation GPUs do not support
+    efficient multi-node tensor parallelism, so a single model replica must fit
+    inside one node (up to 384~GB on a 4-GPU node). A single training job spanning
+    several nodes would need an RDMA-capable 100--200~GbE fabric (additional
+    network cards and switch, roughly \$7--15K for two nodes; estimate); this is
+    not part of the base plan.
+  \item \textbf{Computer 1 redundancy.} A second NAS/private-cloud server (about
+    \$12--18K) with replicated storage and virtual machines is the next step if
+    the license servers or file share become critical; see Section~\ref{sec:open}.
+\end{itemize}

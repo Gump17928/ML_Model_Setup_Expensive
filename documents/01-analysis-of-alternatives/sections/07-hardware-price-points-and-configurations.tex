@@ -1,0 +1,254 @@
+% ===========================================================================
+\ReportSection[sec:hw]{Hardware, Price Points and Configurations}
+
+\ReportSubsection[sec:nas]{Computer 1: NAS and private-cloud server}
+
+\TableTitle{Computer 1 reference bill of materials (planning estimates)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.621}Y{1.379}r@{}}
+  \toprule
+  Component & Specification & Est. cost \\
+  \midrule
+  \endhead
+  Chassis and platform & 2U/4U rack, 12 or more 3.5-inch bays, one 16--24-core server CPU, TPM~2.0, BMC, redundant power supplies & \$3--4K \\
+  Memory & 256~GB ECC & \$1.5--2.5K \\
+  System and VM storage & 2 $\times$ 1.9~TB NVMe (mirror, OS and hypervisor); 2 $\times$ 3.8~TB NVMe (mirror, VMs, vector database) & \$1--1.5K \\
+  Bulk storage & 8 $\times$ 20~TB enterprise HDD in RAID-Z2 or RAID~6 (about 100~TiB usable; plan at most 80\% fill); 4 bays free for growth & \$3--3.6K \\
+  Controller and network & SAS HBA; dual-port 25~GbE & \$0.5--0.8K \\
+  UPS and rack & 3~kVA UPS shared with the ML nodes & \$1--2K \\
+  OS and hypervisor subscription & FIPS-capable Linux and virtualization support & \$0.3--1K \\
+  Switch, firewall, cabling & 25~GbE switch with spare ports, firewall, management network & \$1.5--2.5K \\
+  \midrule
+  \textbf{Computer 1 total} & & \textbf{\$12--18K (about \$15K)} \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Storage sizing (best estimate, to confirm).} The archive is assumed to be about
+20--40~TB now, growing 20--25\% per year, so about 40--70~TB usable is needed within 3
+years including snapshots, vector indexes and model artifacts. The 8 $\times$ 20~TB array
+(about 100~TiB usable, filled to at most 80\%) covers this with room to spare, and 4
+bays remain free.
+
+\TodoAnchor{aoa-backup}
+\textbf{Redundancy.} Following the sponsor's direction, Computer~1 is protected by its
+disks rather than by a second server: RAID-Z2 (tolerates two disk failures), a hot spare
+(add one 20~TB drive, about \$0.4K), redundant power supplies and a UPS, plus snapshots.
+This covers disk failure and accidental deletion. It does not cover loss of the server,
+ransomware or a site loss, because the data and the snapshots share one machine; an
+encrypted offline backup set rotated off-site (about \$2--4K) closes that gap and is
+recommended but optional.
+
+Likely additions not included in the table: Windows Server, database and client-access
+licensing for Autodesk and Bluebeam server components (about \$2--8K; estimate, depends on
+the products chosen; Section~\ref{sec:licenses}).
+
+\ReportSubsection{Computer 2: ML node building blocks}
+
+\TableTitle{ML node options (each in a 4-GPU-capable chassis so GPUs can be added later)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{0.833} Y{1.167} r@{}}
+  \toprule
+  Node & GPUs & Host and notes & Est. cost \\
+  \midrule
+  \endhead
+  \textbf{N1} & 1 $\times$ RTX PRO 6000 Blackwell 96~GB (Max-Q, 300~W), \$8--10K & 16--32-core CPU, 256~GB RAM, 2 $\times$ 3.8~TB NVMe, dual 1600--2000~W PSUs, 25~GbE: \$9--11K; misc.\ \$1K & \$18--22K \\
+  \textbf{N2} & 2 GPUs (192~GB total), \$16--20K & Same class of host: \$10--11K; misc.\ \$1K & \$27--32K \\
+  \textbf{N4} & 4 GPUs (384~GB total), \$32--40K & Host with 512~GB RAM, larger PSUs: \$12--13K; misc.\ \$2K & \$46--55K \\
+  \bottomrule
+\end{xltabular}}
+
+Adding one GPU to an existing node costs about \$8--10K. Government-channel
+(TAA-compliant OEM) pricing is often 15--40\% higher than the street prices used
+here (Section~\ref{sec:procure}).
+
+\ReportSubsection{System configurations and price ladder}
+
+\TableTitle{Configurations (Computer~1 plus ML nodes)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{0.8} r r Y{1.2}@{}}
+  \toprule
+  Config. & ML node(s) & Hardware total & GPU memory & Named users \\
+  \midrule
+  \endhead
+  \textbf{S1} & N1 & \$35K (\$30--40K) & 96~GB & 10--30 \\
+  \textbf{S2} & N2 & \$44K (\$39--50K) & 192~GB & 25--75 \\
+  \textbf{D1} & N1 + N1 (A + B) & \$55K (\$48--62K) & 2 $\times$ 96~GB & 10--30 \\
+  \textbf{D3} & N2 (A) + N1 (B) & \$64K (\$57--72K) & 192 + 96~GB & 30--100 \\
+  \textbf{S4} & N4 & \$65K (\$58--73K) & 384~GB & 75--250 \\
+  \textbf{D4} & N2 + N2 (A + B) & \$73K (\$66--82K) & 2 $\times$ 192~GB & 30--100 (A); up to 60--200 with both serving \\
+  \bottomrule
+\end{xltabular}}
+
+\TableTitle{Upgrade paths}
+{\small
+\begin{tabularx}{\textwidth}{@{}Y{1.0}Y{0.6}Y{1.4}@{}}
+  \toprule
+  Step & Added cost & Result \\
+  \midrule
+  S1 $\to$ S2 (add one GPU) & about \$9K & Doubles memory; train and serve at once on separate GPUs. \\
+  S1 $\to$ D1 (add node B) & about \$20K & Dedicated training node and failover path. \\
+  D1 $\to$ D3 (add GPU to node A) & about \$9K & Roughly doubles serving capacity; failover is at reduced capacity. \\
+  D3 $\to$ D4 (add GPU to node B) & about \$9K & Failover at full capacity; both nodes can serve when not training. \\
+  Any $\to$ third node & \$18--50K & More replicas or parallel training jobs. \\
+  \bottomrule
+\end{tabularx}}
+
+\ReportSubsection[sec:dell]{Dell-configured pricing}
+\TodoAnchor{aoa-dell}
+
+Hardware would be ordered from Dell, configured to specification. Street prices
+understate that cost because enterprise servers include vendor-qualified components,
+warranty and support. A planning multiplier of 1.3 (range 1.15--1.4) is applied to
+hardware until a quote is available; labor and operating costs are unchanged.
+
+\TableTitle[tbl:dell]{Hardware and 3-year cost with Dell-configured pricing (USD)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{0.848} Y{1.091} Y{0.848} Y{1.213}@{}}
+  \toprule
+  Config. & Street-price hardware & Dell-configured hardware (range) & Dell hardware (expected) & 3-yr total, Dell-configured \\
+  \midrule
+  \endhead
+  S1 & \$30--40K & \$35--56K & \$46K & \$81--121K \\
+  S2 & \$39--50K & \$45--70K & \$57K & \$94--140K \\
+  D1 & \$48--62K & \$55--87K & \$72K & \$117--174K \\
+  \textbf{D3} & \$57--72K & \$66--101K & \textbf{\$83K} & \textbf{\$131--192K} \\
+  S4 & \$58--73K & \$67--102K & \$85K & \$122--181K \\
+  D4 & \$66--82K & \$76--115K & \$95K & \$144--211K \\
+  \bottomrule
+\end{xltabular}}
+{\footnotesize 3-year totals add 3 years of operating cost, setup labor and upkeep (Table~\ref{tbl:tco}) to the Dell-configured hardware.}
+
+\textbf{Notes for the Dell quote.}
+\begin{itemize}
+  \item Ask which current GPU-capable PowerEdge models (for example the 2U R-series and the
+    GPU-dense XE-series) and Precision rack or tower workstations support the RTX PRO 6000
+    Blackwell, how many GPUs each holds, and the power and cooling needed. The GPU count
+    per chassis decides the growth path; confirm model numbers with the Dell account team.
+  \item Dell servers typically use passive 600~W Server Edition GPUs instead of 300~W Max-Q
+    cards; add about 0.3~kW per GPU to the power figures in the facility table.
+  \item For Computer~1, request a storage-dense 2U PowerEdge with 12 or more 3.5-inch bays,
+    redundant power, TPM~2.0 and iDRAC, with NVMe boot or VM drives.
+  \item Dell support bundled in the quote (for example ProSupport) may replace part of the
+    annual non-labor support cost assumed below.
+  \item Request country-of-origin and TAA/Section~889 documentation with the quote.
+\end{itemize}
+
+\ReportSubsection[sec:sizing]{Sizing logic}
+\TodoAnchor{aoa-bench}
+
+\textbf{Weights memory} is parameters times bytes per parameter (FP16 = 2,
+FP8 = 1, 4-bit $\approx$ 0.5), plus about 10\% overhead. The \textbf{KV cache}
+per token is
+\[
+  \text{KV bytes/token} = 2 \times \text{layers} \times \text{KV heads} \times \text{head dim} \times \text{bytes per element}.
+\]
+
+\textbf{Example 1: gpt-oss-120b on one 96~GB GPU.} Approximate architecture: 36
+layers, 8 KV heads, head dimension 64, with about half the layers using a short
+sliding window, so only about 18 layers cache the full context. In BF16 the
+cache is about $2 \times 18 \times 8 \times 64 \times 2~\text{B} \approx 37$~KB per
+token, or about 4.7~GB for a 128K-token session. With
+$96 \times 0.9 \approx 86$~GB and about 63~GB of weights, roughly 23~GB remains
+for cache: about 5 simultaneous 128K sessions or 70 or more at 8K context.
+Compute, not memory, usually limits short-prompt use, which is why one GPU is
+rated for 3--8 simultaneous active users.
+
+\textbf{Example 2: 70B dense model in FP8 on two GPUs (192~GB).} With 80 layers,
+8 KV heads, head dimension 128 and an FP8 cache, the cost is
+$2 \times 80 \times 8 \times 128 \times 1~\text{B} \approx 160$~KB per token (about
+21~GB per 128K session). After about 70~GB of weights, about 103~GB remains:
+roughly 5 full-128K sessions or 80 at 8K. A mixture-of-experts model is therefore
+much more efficient than a dense 70B model for long-context, multi-user serving.
+
+\[
+  \text{Concurrent sessions} \approx \frac{\text{GPU memory} \times 0.9 - \text{weights}}{\text{average context tokens} \times \text{KV bytes per token}}
+\]
+
+\textbf{Throughput (order of magnitude).} Each GPU has about 1.8~TB/s memory
+bandwidth. A small-active-parameter mixture-of-experts model can sustain roughly
+1,000--3,000 aggregate output tokens/s per GPU under batching. Dense 70B models
+are several times slower. \emph{Benchmark the actual model and real prompts
+before purchase.}
+
+\textbf{Fine-tuning memory (planning estimates).}
+
+\TableTitle{Fine-tuning feasibility on 96 GB and 192 GB nodes}
+{\small
+\begin{xltabular}{\textwidth}{@{}Y{1.138}Y{0.828}Y{1.034}@{}}
+  \toprule
+  Method and model & Approx.\ GPU memory & Fits on \\
+  \midrule
+  \endhead
+  Adapter (LoRA/QLoRA), 7--30B model & 20--70~GB & One 96~GB GPU \\
+  QLoRA, 70B dense model (4-bit base) & 48--70~GB & One 96~GB GPU (tight at long sequence lengths) \\
+  Adapter fine-tuning of gpt-oss-120b or similar & about 65--90~GB or more (verify with current tooling) & One 96~GB GPU is tight; two GPUs (192~GB) is comfortable \\
+  Full fine-tuning (about 16 bytes per parameter with Adam in mixed precision) & 7B: about 112~GB; 30B: about 480~GB & 7B or smaller only on a 2-GPU node; larger is out of scope \\
+  Pre-training a new LLM & Far beyond this budget & Not feasible \\
+  \bottomrule
+\end{xltabular}}
+
+Adapter jobs on a few thousand to roughly one hundred thousand examples typically
+run for hours to a few days on one GPU; confirm in the pilot. The GPUs connect
+over PCIe (no NVLink), which is fine for serving and adapter training.
+
+\ReportSubsection{Sizing check against the stated requirement}
+
+Requirement: at least 20 named users, about 12 generating at the same time.
+\begin{itemize}
+  \item \textbf{Streaming load.} 12 users $\times$ 20 tokens/s is about 240 tokens/s,
+    far below the roughly 1,000--3,000 tokens/s a mixture-of-experts model can sustain per
+    GPU in aggregate.
+  \item \textbf{Cache memory.} With gpt-oss-120b, 12 sessions of 16K tokens need about 7~GB;
+    even 3 sessions at 128K (about 14~GB) plus 9 at 16K (about 5~GB) need about 19~GB, which
+    fits in the roughly 23~GB left on one 96~GB GPU after the weights.
+  \item \textbf{Limiting factor.} Processing many long prompts at once (prompt prefill) and
+    keeping time to first token low. This is why one GPU is rated 3--8 simultaneous users;
+    the rating is conservative and the pilot benchmark may show more.
+  \item \textbf{Conclusion.} A 1-GPU serving node is marginal for 12 users. A 2-GPU node
+    (rated 8--20) meets the need with margin, and Node~B can add capacity when it is not
+    training. If named users grow well beyond 20, simultaneous use may exceed 20: add a GPU
+    or use Node~B as a second serving node.
+\end{itemize}
+
+\ReportSubsection{Facility}
+\TodoAnchor{aoa-facility}
+
+\TableTitle{System power at load and circuit guidance}
+{\small
+\begin{tabularx}{\textwidth}{@{}l Y{0.6} Y{1.4}@{}}
+  \toprule
+  Config. & Power at load & Circuit and cooling \\
+  \midrule
+  S1 & 1.1--1.5~kW & One 208/240~V 20~A circuit. \\
+  S2 & 1.6--2.1~kW & One 208/240~V 20~A circuit. \\
+  D1 & 1.9--2.5~kW & One 208/240~V 20~A circuit (about 3.3~kW continuous). \\
+  D3 & 2.4--3.1~kW & Two 20~A circuits, or one 30~A circuit, with separate PDUs per node. \\
+  S4 & 2.3--3.1~kW & Two 20~A circuits or one 30~A circuit. \\
+  D4 & 2.9--3.7~kW & Two 20~A circuits or one 30~A circuit; about 12,600~BTU/h at the top of the range. \\
+  \bottomrule
+\end{tabularx}}
+
+Figures assume 300~W (Max-Q) GPUs: about 0.8--1.0~kW for N1, 1.3--1.6~kW for N2,
+2.0--2.6~kW for N4 and 0.3--0.5~kW for Computer~1. If Dell supplies 600~W Server
+Edition GPUs, add about 0.3~kW per GPU. The nodes are loud; place them
+in a machine room or sound-attenuated rack.
+
+\ReportSubsection[sec:procure]{Procurement considerations}
+\begin{itemize}
+  \item \textbf{Dell as vendor; TAA, Section 889 and NDAA compliance.} Dell is the stated
+    vendor for configured-to-order servers. Request quotes for Computer~1 and for each
+    candidate node configuration, with country-of-origin and TAA/Section~889
+    documentation, and compare with the street-price planning figures in this report
+    (Section~\ref{sec:dell}).
+  \item \textbf{Memory and disk price volatility.} Server RAM and large HDD prices
+    have been unstable. Quote early and consider buying less RAM now with expansion
+    later.
+  \item \textbf{Warranty and spares.} Three-year on-site coverage where available; hold
+    a spare PSU and a spare HDD at minimum. Plan to retain failed drives (CUI)
+    rather than returning them.
+  \item \textbf{License servers.} Confirm with each software vendor that the license
+    server may run in a virtual machine and what hardware binding applies, before
+    finalizing the Computer~1 design.
+  \item \textbf{Lead time and obsolescence.} Confirm GPU availability; plan for a
+    3--5 year service life. The model layer can be replaced without hardware change.
+\end{itemize}

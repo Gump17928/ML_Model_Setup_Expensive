@@ -1,0 +1,89 @@
+% ===========================================================================
+\ReportSection[sec:benefits]{Benefits}
+
+\ReportSubsection{Capability benefits (what the existing tools cannot do)}
+
+\TableTitle{Capabilities and example workflows}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.844}Y{0.938}Y{1.218}@{}}
+  \toprule
+  Capability & Business value & Example workflow \\
+  \midrule
+  \endhead
+  \textbf{Large context (128K tokens, about 300 pages)} & Analyze whole specifications and reports in one pass. & Compare a 200-page specification to a test report and list gaps. \\
+  \textbf{Retrieval with citations} & Find and cite answers across thousands of documents. & ``What did past programs decide about connector X?'' with sources. \\
+  \textbf{API access} & Embed the LLM in scripts, pipelines and spreadsheets. & Nightly summary of new anomaly reports. \\
+  \textbf{Code and script assistance on larger codebases} & Faster development, documentation and test generation. & Review a multi-file Python/MATLAB toolchain and generate unit tests. \\
+  \textbf{Concurrent multi-user access with quotas} & Team-wide availability and predictable response. & 15 engineers using it at once at peak. \\
+  \textbf{Batch processing} & Bulk tasks run overnight. & Classify and summarize 10,000 legacy records. \\
+  \textbf{Expert assistants built from the NAS archive} & Retrieval over archived projects and licensed standards with clause-level citations; optional fine-tuning on reviewed examples. & Ask questions of NFPA~780 and past project reports and get cited answers. \\
+  \textbf{Fine-tuning on internal data (Node~B)} & Learn terminology, templates and formats without slowing users. & Adapter tuned on past reports to draft in the standard format. \\
+  \textbf{Model choice and upgrades} & Swap in better models as released; no vendor lock-in. & Adopt a new approved model after testing on Node~B. \\
+  \textbf{Structured output and tool use} & Reliable JSON and forms. & Auto-populate traceability matrices. \\
+  \bottomrule
+\end{xltabular}}
+
+\ReportSubsection{Benefits of the second ML node}
+\begin{itemize}
+  \item \textbf{Training without disruption.} Fine-tuning and evaluation jobs can run for
+    hours or days on Node~B while Node~A keeps serving at full speed. On a single node,
+    training must be scheduled off-hours or must take GPUs away from users.
+  \item \textbf{Failover.} If Node~A fails, the gateway routes to Node~B (at reduced
+    capacity in D3, full capacity in D1 and D4), so a hardware failure does not stop all
+    LLM use.
+  \item \textbf{Second serving node.} When no training job is running, Node~B can load the
+    same model and share the load. Training takes priority, so this is spare capacity, not
+    guaranteed capacity.
+  \item \textbf{Safe upgrades.} Drivers, inference software and new models are tested on
+    Node~B before production sees them, and patching can be done one node at a time.
+  \item \textbf{Growth.} Because both nodes are the same class of machine, either can be
+    given more GPUs (about \$9K each) and a third node can be added by repeating the build.
+\end{itemize}
+Section~\ref{sec:node-b} estimates whether these benefits justify the cost of Node~B.
+
+\ReportSubsection{Benefits of Computer 1}
+\begin{itemize}
+  \item \textbf{One governed home for engineering data:} file share with access
+    control, snapshots, quotas and tested backups, inside the CUI boundary.
+  \item \textbf{License servers and a private cloud} for Autodesk products, Bluebeam and
+    \PH{other software}, replacing ad hoc workstations or third-party hosting
+    \PH{describe current arrangement and cost}. Whether a local license server is needed
+    depends on the licensing model (ENG-RPT-01, Section on hosting Autodesk and Bluebeam).
+  \item \textbf{Platform for the LLM application tier:} retrieval indexes, model and
+    artifact registry and logs sit on protected, backed-up storage.
+  \item \textbf{Independent value:} Computer~1 would be justified even if no LLM were
+    deployed; the LLM adds a modest increment to its cost.
+\end{itemize}
+
+\ReportSubsection{Productivity benefits}
+Published studies show wide ranges; validate in the pilot.
+
+\TableTitle{Expected time reduction by task category}
+{\small
+\begin{tabularx}{\textwidth}{@{}Y{1.448}Y{0.517}Y{1.035}@{}}
+  \toprule
+  Task category & Baseline effort & Expected reduction \\
+  \midrule
+  Document summarization and review & 1--4~hr & 40--70\% (largest with long context) \\
+  First-draft reports, emails, procedures & 1--3~hr & 30--50\% \\
+  Information search across repositories & 0.5--2~hr & 50--80\% (needs retrieval) \\
+  Code and script writing, debugging, tests & varies & 20--40\% \\
+  Data extraction and transformation & 1--6~hr & 40--80\% \\
+  Requirements and traceability analysis & 4--16~hr & 30--60\% \\
+  \bottomrule
+\end{tabularx}}
+
+\ReportSubsection{Risk-reduction and strategic benefits}
+\begin{itemize}
+  \item \textbf{CUI containment:} processing stays inside the boundary; no third-party
+    retention or training on inputs; fine-tuned models and indexes stay under the
+    organization's control.
+  \item \textbf{Less shadow AI:} a capable approved tool reduces the incentive to use
+    unapproved ones.
+  \item \textbf{Auditability:} per-user logs and retrieval records support compliance
+    evidence.
+  \item \textbf{Continuity:} not dependent on vendor changes to pricing, terms or
+    features; a failover path exists for the ML service.
+  \item \textbf{Strategic:} builds in-house AI engineering capability, makes historical
+    documents searchable, and provides a base for domain-specific assistants.
+\end{itemize}

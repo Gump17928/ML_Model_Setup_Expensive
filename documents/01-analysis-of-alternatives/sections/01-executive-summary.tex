@@ -1,0 +1,68 @@
+% ===========================================================================
+\ReportSection[sec:exec]{Executive Summary}
+
+The organization needs an LLM capability that can process CUI with a large
+context window, serve several people at once, and fit engineering workflows
+(document analysis, retrieval over internal repositories, code and script
+assistance, report drafting). The two tools currently provided lack the
+functionality and context size for these workflows (see the companion Business
+Justification).
+
+This revision plans \textbf{two computers} rather than one:
+
+\begin{itemize}
+  \item \textbf{Computer~1 -- NAS and private-cloud server.} File share,
+    bulk storage and backups, software license servers, a private cloud for
+    specific software, and the LLM application tier (gateway, chat interface,
+    retrieval, vector database, model and artifact registry, logging).
+  \item \textbf{Computer~2 -- ML node(s).} Either a \textbf{single node} that
+    serves the model, or \textbf{two nodes}: Node~A serves production use
+    while Node~B runs fine-tuning and experiments at the same time, and can
+    take over serving if Node~A fails.
+\end{itemize}
+
+The design is built so more nodes can be added later: every ML node is the same
+class of machine, sits on the same storage network, and is placed behind the
+same gateway.
+
+\TableTitle[tbl:configs]{System configurations and planning price points (hardware only)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.062} l Y{0.692} Y{1.246}@{}}
+  \toprule
+  Config. & Composition & Hardware & Active users* & Training and resilience \\
+  \midrule
+  \endhead
+  \textbf{S1} & Computer~1 + one 1-GPU node & \$35K (\$30--40K) & 3--8 & Training shares the GPU with serving (run off-hours). No failover. \\
+  \textbf{S2} & Computer~1 + one 2-GPU node & \$44K (\$39--50K) & 8--20, or 3--8 with one GPU training & Split GPUs between serving and training. No failover. \\
+  \textbf{D1} & Computer~1 + two 1-GPU nodes & \$55K (\$48--62K) & 3--8 & Dedicated training node; Node~B can serve at the same capacity if Node~A fails. \\
+  \textbf{D3} & Computer~1 + one 2-GPU node (A) + one 1-GPU node (B) & \$64K (\$57--72K) & 8--20 & Dedicated training node; Node~B serves at reduced capacity (3--8) if Node~A fails. \\
+  \textbf{S4} & Computer~1 + one 4-GPU node & \$65K (\$58--73K) & 25--50, or 3+1 GPU split & Single node; no failover. \\
+  \textbf{D4} & Computer~1 + two 2-GPU nodes & \$73K (\$66--82K) & 8--20 (A); up to 16--40 with both serving & Dedicated training node; Node~B fails over at full capacity. \\
+  \bottomrule
+\end{xltabular}}
+{\footnotesize * Simultaneous active users on the serving node(s). The stated need is at least 20 named users with about 12 at once, so S1 and D1 (1-GPU serving node) fall short. Hardware is at street prices; Dell-configured prices are about 1.15--1.4 times higher (Section~\ref{sec:dell}). Estimates to be confirmed by benchmark.}
+
+\textbf{Confirmed requirements (v0.4).} At least 20 named users, with about 12 using
+the model at the same time. The model must use the archived data on the NAS, both by
+retrieval and by training on selected documents (for example NFPA~780). Training
+alongside serving is the main use of the second node, which may also run a copy of
+the serving model as a second node. The NAS will host Autodesk products and Bluebeam
+\PH{and other software}. Hardware would be ordered from Dell, configured to
+specification. Computer~1 gets its redundancy from disks inside the server rather
+than from a second server.
+
+\textbf{Preliminary recommendation.} Buy \textbf{D3}: one NAS and private-cloud server, a
+2-GPU serving node (Node~A) and a 1-GPU training node (Node~B) that can also serve as a
+second node, using 4-GPU-capable chassis so each node can grow by about \$9K per GPU at
+street prices. Hardware is about \$64K at street prices and about \$83K configured by
+Dell (planning multiplier 1.3, range 1.15--1.4; Section~\ref{sec:dell}). A 1-GPU serving
+node is rated for 3--8 simultaneous users, below the stated 12, so S1 and D1 are not
+recommended. If failover at full capacity is required, add a second GPU to Node~B (D4).
+Alternative~2 (a compliant cloud LLM) remains a possible fallback; options are in
+Section~\ref{sec:fallback}. See Section~\ref{sec:comparison} for the 3-year cost and
+scoring, and Section~\ref{sec:open} for the decisions and information still needed.
+
+\textbf{Cost note.} Computer~1 (about \$15K at street prices, plus its setup and upkeep)
+is needed for the storage, licensing and private-cloud purposes whichever LLM option is
+chosen, so the cost that differs between alternatives is the ML node(s).
+Section~\ref{sec:tco} reports both the full-system and ML-only costs.

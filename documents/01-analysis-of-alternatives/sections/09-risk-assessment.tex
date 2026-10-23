@@ -1,0 +1,31 @@
+% ===========================================================================
+\ReportSection{Risk Assessment}
+
+\TableTitle{Risks (L = likelihood, I = impact: H/M/L)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.839} c c Y{1.161}@{}}
+  \toprule
+  Risk & L & I & Mitigation \\
+  \midrule
+  \endhead
+  Computer 1 is a single point of failure for the file share, license servers and the LLM application tier & M & H & RAID-Z2 with a hot spare, redundant PSUs, UPS, tested VM restore; second gateway on Node~B. No second server (sponsor decision). \\
+  RAID and snapshots share one machine with the data, so they do not protect against server loss, ransomware or site loss & M & H & Encrypted offline backup set rotated off-site (about \$2--4K), restore tested. \\
+  A fine-tuned model states wrong clause numbers or requirements with confidence & M & H & Retrieval with citations as the primary mechanism; evaluate adapters against known answers; human review of any use in deliverables. \\
+  Standards (for example NFPA~780) are copyrighted and the license may not allow AI indexing or training & M & M & Check license terms before ingesting; keep edition records. \\
+  A model trained on restricted folders is used by people without access & L & H & Per-group adapters; access-aware retrieval; train only on material open to all users of a model. \\
+  Autodesk or Bluebeam needs internet sign-in or cloud services outside the boundary & M & M & Verify licensing model and self-hosted options with the vendors before design freeze. \\
+  License vendor restricts virtualization or binds licenses to hardware & M & M & Confirm terms before design freeze; use a dedicated host if required. \\
+  Hardware must be TAA-compliant, raising cost 15--40\% & H & M & Confirm sourcing rules early; obtain OEM quotes alongside white-box. \\
+  Authorization (ATO) delays, now covering file share and private cloud as well as the LLM & M & H & Engage the ISSO/ISSM early; one boundary and SSP for both computers. \\
+  Fine-tuned models or embeddings inherit CUI sensitivity & M & M & Registry access control; include in backup and sanitization rules. \\
+  Training jobs interfere with serving (single-node configs) & M & M & Run off-hours or dedicate GPUs; prefer dual-node for heavy training. \\
+  Upkeep exceeds 3--4 hr/week during growth or after incidents & M & M & Named owner and backup person; configuration as code; scheduled maintenance windows. \\
+  Under-sizing as adoption grows & M & M & Quotas, queueing, instrumented pilot; add a GPU at 70\% sustained utilization. \\
+  GPU, RAM or disk supply and price volatility & M & M & Early quotes; accept equivalent parts. \\
+  Model license or provenance concern & L--M & H & Legal review; approved-model list. \\
+  Hallucination or misuse & H & M & Citations, human review, acceptable-use policy. \\
+  Data leakage between users & L & H & Per-group access control, per-tenant indexes, red-team tests. \\
+  Prompt injection through documents & M & M & Input sanitization; limited tool permissions; no autonomous external actions. \\
+  Facility power, cooling and noise & M & M & Machine-room site check; 208/240~V circuits. \\
+  \bottomrule
+\end{xltabular}}

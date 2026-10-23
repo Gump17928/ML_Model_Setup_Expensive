@@ -1,0 +1,25 @@
+% ===========================================================================
+\ReportSection[sec:usecases]{Use Cases and Target Workflows}
+\TodoAnchor{bj-usecases}
+
+Build out with stakeholders.
+
+\TableTitle{Workflows}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}c Y{1.405} c Y{0.649} Y{0.973} Y{0.973}@{}}
+  \toprule
+  \# & Workflow & Users & Context need & Current tool outcome & Proposed outcome \\
+  \midrule
+  \endhead
+  1 & Specification and requirements review, gap analysis & \PH{ } & 100--300K tokens & Must split; incomplete & Single pass with citations \\
+  2 & Test report and data summarization & \PH{ } & 50--150K & Truncated & Complete summary, extracted tables \\
+  3 & Archive and standards knowledge search (e.g., NFPA~780) with citations & \PH{ } & Retrieval + 8--32K & Not available & Cited answers across archive and standards \\
+  4 & Script and code development and review & \PH{ } & 30--200K & Limited to snippets & Larger-scope analysis \\
+  5 & Report and procedure drafting to templates & \PH{ } & 16--64K & Generic output & Template-aware, consistent \\
+  6 & Batch classification and extraction & \PH{ } & Per document & Manual & Automated overnight \\
+  7 & Fine-tuned assistant for \PH{domain} & \PH{ } & Varies & Not feasible & Adapter trained on Node~B \\
+  8 & Proposal and contract support & \PH{ } & 100K+ & Not feasible & Compliance matrix drafting \\
+  9 & Lessons-learned mining & \PH{ } & Retrieval & Not feasible & Trend identification \\
+  10 & Autodesk, Bluebeam and \PH{other software} hosting; file share and license services & \PH{ } & -- & \PH{current arrangement} & Consolidated on Computer~1 \\
+  \bottomrule
+\end{xltabular}}

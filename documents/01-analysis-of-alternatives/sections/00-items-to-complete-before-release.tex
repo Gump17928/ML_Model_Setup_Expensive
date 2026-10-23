@@ -1,0 +1,33 @@
+% ===========================================================================
+\IntakeSection{Items To Complete Before Release}
+
+\Guidance{Every placeholder and open decision in this report is listed here and links to the
+place it appears. Resolve each item, tick the Status box, and update the revision history
+before the report is sent outside the team. ``Required'' items are missing information;
+``Confirm'' items are assumptions that need a named person to agree to them.}\\[4pt]
+
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}c Y{1.5} Y{0.7} c c Y{0.8}@{}}
+  \toprule
+  \# & Item & Needed from & Priority & Status & Go to \\
+  \midrule
+  \endhead
+  1 & Document identity and handling: author, intake reference number, recipients, center name and logo, marking text, version and date. & Document owner, security office & Required & $\square$ & \TodoLink{aoa-ctrl}{Control block} \\
+  2 & Named-user growth beyond 20, workflow inventory, and the other planning assumptions (prompt sizes, speed targets). & Sponsor & Confirm & $\square$ & \TodoLink{aoa-assump}{Key assumptions} \\
+  3 & Recovery targets (RTO/RPO) for LLM serving, the file share and the license services. & Sponsor, IT & Required & $\square$ & \TodoLink{aoa-assump}{Key assumptions} \\
+  4 & Archive: size now, growth rate, file formats, folder and permission structure, and which documents to ingest first. & Sponsor, IT & Required & $\square$ & \TodoLink{aoa-storage}{Computer 1 needs} \\
+  5 & Autodesk and Bluebeam: products, named-user or network licensing, internet sign-in, server components; other software to host. & IT, reseller, vendors & Required & $\square$ & \TodoLink{aoa-licenses}{Hosting Autodesk and Bluebeam} \\
+  6 & Confirm that the license for each standard (for example NFPA~780) allows internal indexing and AI training. & Legal, publisher & Required & $\square$ & \TodoLink{aoa-nfpa}{Archive knowledge} \\
+  7 & CUI categories in scope, export-controlled data, contract clauses, model-origin policy, SIEM log retention, and whether any cloud processing of CUI is allowed. & Security office, contracts & Required & $\square$ & \TodoLink{aoa-cui}{Compliance requirements} \\
+  8 & Failover decision: is 3--8 users acceptable while Node~A is down, or must all 12 be served (Node~B with 2 GPUs, D4)? Will Node~B also serve routinely? & Sponsor & Required & $\square$ & \TodoLink{aoa-nodeb}{Node B modes} \\
+  9 & Choose the cloud fallback option(s) to carry forward: none, non-CUI only, CUI-authorized government cloud, or warm standby. & Sponsor, security office & Required & $\square$ & \TodoLink{aoa-fallback}{Cloud fallback options} \\
+  10 & Whether an offline backup copy is wanted in addition to disk redundancy; sponsor accepts the residual risk if not. & Sponsor & Confirm & $\square$ & \TodoLink{aoa-backup}{Redundancy} \\
+  11 & Dell quotes for Computer~1 and each node configuration; which Dell models support the chosen GPUs; replace the 1.3 multiplier and the Dell-configured figures. & Dell account team & Required & $\square$ & \TodoLink{aoa-dell}{Dell-configured pricing} \\
+  12 & Pilot benchmark: throughput and latency at 12 simultaneous users, long-context behavior, retrieval and fine-tuning quality and run times, ingestion rate; replace the estimates. & Project team & Required & $\square$ & \TodoLink{aoa-bench}{Sizing logic} \\
+  13 & Facility readiness: circuits, cooling, noise, floor space, physical access; add 0.3~kW per GPU if Dell supplies 600~W GPUs. & Facilities & Required & $\square$ & \TodoLink{aoa-facility}{Facility} \\
+  14 & Labor assumptions (hourly rate, upkeep hours, setup hours) and operating-cost estimates still accepted. & Sponsor, finance & Confirm & $\square$ & \TodoLink{aoa-tco}{Three-year cost} \\
+  15 & Remaining open items: who operates both computers and how much time they have, server operating-system standard (Windows with Hyper-V or Linux with KVM), funding and procurement vehicle, approved marking text. & Sponsor & Required & $\square$ & \TodoLink{aoa-open}{Open items list} \\
+  16 & Cross-check all figures against ENG-RPT-02 and update both documents together. & Document owner & Required & $\square$ & \TodoLink{aoa-tco}{Three-year cost} \\
+  17 & No bracketed placeholders remain in the finished PDF; compiled twice so the contents and cross-references are current; revision history updated. & Document owner & Required & $\square$ & --- \\
+  \bottomrule
+\end{xltabular}}

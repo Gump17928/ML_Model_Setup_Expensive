@@ -1,0 +1,17 @@
+% ===========================================================================
+\ReportSection[sec:rec]{Recommendation}
+
+Proceed with a benchmark and pilot and with procurement planning for a two-computer,
+on-premises system authorized for CUI: Computer~1 (about \$20K Dell-configured) for
+storage, licensing and the application tier, and ML nodes in configuration \textbf{D3}
+(about \$83K total hardware Dell-configured; about \$64K at street prices), built on
+4-GPU-capable chassis so either node can grow. Fund Computer~1 and Node~A first and add
+Node~B after the pilot confirms demand and the training workload; plan Node~B with two
+GPUs (D4) if failover at the full 12 users is required. The investment is justified by
+(1) workflows the current tools cannot perform because of context and functionality
+limits, (2) controlled handling of CUI, including the NAS archive and fine-tuned models,
+(3) consolidated storage and licensing, (4) no per-token cost growth, and (5) a reusable
+internal AI platform. At 20--30 users the time-savings return is modest and a compliant
+cloud LLM may cost less on usage alone, so funding should be conditional on pilot results
+that confirm demand and measured time savings, on a named operations owner, and on a
+Dell quote.

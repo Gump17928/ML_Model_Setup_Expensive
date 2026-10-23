@@ -1,0 +1,84 @@
+% ===========================================================================
+\ReportSection[sec:comparison]{Comparative Analysis}
+
+\ReportSubsection[sec:tco]{Three-year cost}
+\TodoAnchor{aoa-tco}
+
+Hardware in this table is at street prices; Dell-configured totals are in
+Table~\ref{tbl:dell}. Assumptions (also used in the Business Justification and accepted by
+the sponsor for now): operator salary
+\$100,000/year, or \$48.08/hour with no overhead multiplier. Upkeep: 2~hr/week
+for the ML side (given) plus 1~hr/week for Computer~1 (assumed); a second node
+adds 1~hr/week (assumed). Setup: 80--160~hr for Computer~1, 160--320~hr for the
+first ML node, and 40--80~hr for a second node (all assumed).
+
+\TableTitle[tbl:tco]{Estimated 3-year cost by configuration (USD)}
+{\scriptsize
+\begin{xltabular}{\textwidth}{@{}l Y{0.891} Y{1.366} Y{0.891} Y{0.95} Y{0.95} Y{0.952}@{}}
+  \toprule
+  Config. & Hardware & Setup labor & Annual non-labor opex & Annual upkeep & \textbf{3-yr total} & 3-yr ML only$^\dagger$ \\
+  \midrule
+  \endhead
+  S1 & \$30--40K & 240--480~hr; \$11.5--23.1K & \$4--6.5K & 3~hr/wk; \$7.5K & \textbf{\$76--105K} & \$47--63K \\
+  S2 & \$39--50K & 240--480~hr; \$11.5--23.1K & \$5--8K & 3~hr/wk; \$7.5K & \textbf{\$88--120K} & \$59--77K \\
+  D1 & \$48--62K & 280--560~hr; \$13.5--26.9K & \$6--10K & 4~hr/wk; \$10K & \textbf{\$110--149K} & \$80--107K \\
+  D3 & \$57--72K & 280--560~hr; \$13.5--26.9K & \$7--11.5K & 4~hr/wk; \$10K & \textbf{\$122--163K} & \$92--121K \\
+  S4 & \$58--73K & 240--480~hr; \$11.5--23.1K & \$7--11K & 3~hr/wk; \$7.5K & \textbf{\$113--152K} & \$84--109K \\
+  D4 & \$66--82K & 280--560~hr; \$13.5--26.9K & \$8--13K & 4~hr/wk; \$10K & \textbf{\$134--178K} & \$104--136K \\
+  \bottomrule
+\end{xltabular}}
+{\footnotesize $^\dagger$ Excludes Computer~1 (about \$29--42K over 3 years, including its hardware, setup, operating cost and 1~hr/wk upkeep), which is needed for storage and licensing under any LLM alternative except the status quo. Non-labor opex covers support, software, power and cooling. 3-year total = hardware + setup labor + 3 $\times$ (non-labor opex + upkeep).}
+
+\ReportSubsection{Scoring}
+
+\TableTitle{Weighted scores (1 = poor, 5 = excellent; illustrative, revise with stakeholders)}
+{\small
+\begin{xltabular}{\textwidth}{@{}Y{1.0} r r r r r r@{}}
+  \toprule
+  Criterion (weight) & Alt 0 & Alt 2 & S2 & D1 & D3 & D4 \\
+  \midrule
+  \endhead
+  CUI compliance and control (25\%) & 4 & 3 & 5 & 5 & 5 & 5 \\
+  Capability and context (15\%) & 1 & 5 & 4 & 3 & 4 & 4 \\
+  Concurrency and scalability (15\%) & 2 & 5 & 2 & 2 & 3 & 4 \\
+  Resilience and continuity (15\%) & 3 & 5 & 2 & 4 & 4 & 4 \\
+  3-year cost (15\%) & 5 & 3 & 4 & 3 & 3 & 2 \\
+  Time to capability (5\%) & 5 & 3 & 3 & 3 & 3 & 3 \\
+  Integration and customization (10\%) & 1 & 3 & 5 & 5 & 5 & 5 \\
+  \midrule
+  \textbf{Weighted score} & \textbf{3.00} & \textbf{3.90} & \textbf{3.70} & \textbf{3.70} & \textbf{4.00} & \textbf{4.00} \\
+  \bottomrule
+\end{xltabular}}
+
+Interpretation: D3 scores as high as D4 at about \$9K less hardware at street prices, and it keeps a
+failover path and a dedicated training node. The compliant cloud scores well on the
+LLM alone but is sensitive to usage growth and to CUI contract and risk acceptance,
+and it does not replace Computer~1. The scores are judgments, not measurements. D1 appears
+in the table but does not meet the stated 12 simultaneous users.
+
+\ReportSubsection{Break-even versus a compliant cloud LLM}
+\[
+  \text{Break-even (months)} = \frac{\text{On-premises ML upfront cost}}{\text{Monthly cloud cost} - \text{Monthly on-premises ML run cost}}
+\]
+Computer~1 is excluded because it is needed in either case. For D3 at Dell-configured
+prices, the ML upfront cost is about \$64K of hardware (street \$49K $\times$ 1.3) plus
+about \$14K of setup labor, or about \$78K, and the ML run cost is about \$1.25K/month
+(non-labor opex plus upkeep). If cloud spend reaches \$4K/month, break-even is about
+28 months. Averaged over 3 years the on-premises ML side costs about \$3.4K/month, so the
+cloud is cheaper if spend stays below that. For 20--30 users a compliant cloud LLM is
+therefore plausibly cheaper than D3 on usage cost alone unless usage is heavy. The case
+for on-premises rests on keeping CUI inside the boundary, training on the NAS archive
+without sending it off-site, no per-token cost growth, and the fact that Computer~1 is
+needed anyway. Usage profiling in the pilot should drive this choice.
+
+\ReportSubsection{Capability notes}
+\begin{itemize}
+  \item Open-weight models in 2026 handle most enterprise tasks (summarization,
+    extraction, drafting, scripting) well but may trail the best proprietary models on
+    the hardest reasoning and agentic tasks.
+  \item At this budget the largest practical models are about 120B parameters
+    (nodes with 96--192~GB) and a 4-bit 400B-class mixture of experts on a 4-GPU
+    node. Quantization lowers quality slightly; validate against real workflows.
+  \item Long-context quality degrades with length; use retrieval and chunking instead of
+    relying on raw 128K-token prompts for everything.
+\end{itemize}

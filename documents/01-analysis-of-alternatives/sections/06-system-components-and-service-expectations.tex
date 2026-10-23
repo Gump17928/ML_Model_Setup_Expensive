@@ -1,0 +1,100 @@
+% ===========================================================================
+\ReportSection[sec:components]{System Components and Service Expectations}
+
+\ReportSubsection{Plain-language overview}
+
+The system lets many people ask questions of a large language model (LLM) from their
+own computers, with the model running entirely on equipment inside the organization.
+A person types a question or uploads a document in a web page or a script. A gateway
+checks who they are, a retrieval service finds relevant passages in the archived files
+on the NAS, and the model, running on a GPU server, writes an answer that cites those
+passages. Many people can do this at once because the model software handles their
+requests together rather than one after another. A second GPU server is used mainly to
+train the model on organization-specific material without slowing anyone down, and it
+can also take over serving when needed. The first computer holds the files, backups,
+license servers and the supporting software, and nothing leaves the organization's
+boundary.
+
+\ReportSubsection{What each piece is and does}
+
+\TableTitle{System components}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.8} Y{1.3} Y{1.2} Y{0.7}@{}}
+  \toprule
+  Component & What it is & What it does for users & Runs on \\
+  \midrule
+  \endhead
+  ML node (GPU server) & A server holding one or more 96~GB graphics processing units (GPUs). The GPU memory is where the model lives while it works. & Provides the computing power to answer questions quickly and to train the model. & Computer~2 \\
+  Language model (LLM) & A large file of learned numbers (weights) that predicts text; ``open-weight'' means the organization may run it locally. & Reads questions and documents and writes answers, summaries, code and drafts. & ML node GPUs \\
+  Inference server & Software (for example vLLM) that loads the model and serves requests. & Lets many users share one loaded model, streams answers as they are written, and keeps recent context in memory to save time. & ML node \\
+  Embedding model and reranker & Small models that turn text into numbers that capture meaning, and that reorder search results by relevance. & Make search work by meaning rather than exact words. & ML node or CPU \\
+  Vector database & A database of those numbers for every document passage. & Finds the passages most relevant to a question in milliseconds. & Computer~1 \\
+  Ingestion pipeline & Programs that read files on the NAS, extract text (with OCR for scans), split it into passages, and index it. & Make archived documents and standards searchable; re-run when files change. & Node~B or CPU; results stored on Computer~1 \\
+  Retrieval service & The logic that takes a question, finds passages, builds the prompt, calls the model, and returns an answer with citations. & Gives answers tied to documents, clauses and pages, and applies each user's access rights. & Computer~1 \\
+  LLM gateway & A single front door with an OpenAI-compatible interface. & Signs users in, applies quotas and priorities, routes to Node~A or B, fails over, and logs each request. & Computer~1 \\
+  Chat interface & A web page for chatting, uploading files and reusing prompts. & The everyday way most people use the system. & Computer~1 \\
+  Training environment & Job queue, fine-tuning tools, experiment tracking and evaluation tests. & Adapts the model to organization vocabulary and formats; tests whether it helped. & Node~B \\
+  Model and artifact registry & A versioned, access-controlled store of approved models, adapters and indexes with checksums. & Ensures only approved, verified models run and allows rollback. & Computer~1 \\
+  Identity provider & The directory and sign-in service (for example Active Directory with CAC/PIV or multi-factor). & Controls who can use the system and which documents they can retrieve. & Existing or Computer~1 \\
+  Logging and monitoring & Collection of audit logs and performance measurements. & Shows who asked what, supports compliance evidence, and warns of overload or failures. & Computer~1, forwarded to the SIEM \\
+  File share (NAS) & Shared storage with permissions, snapshots and quotas, served over SMB and NFS. & Holds project data, the archive, datasets, checkpoints and backups. & Computer~1 \\
+  License servers & Programs that hand out floating software licenses on the network. & Allow engineering software to run; needed only for network-type licenses. & Computer~1 (VM) \\
+  Private cloud (hypervisor) & Virtualization software that runs several isolated virtual machines on one server. & Hosts Autodesk, Bluebeam and other specific software in separate, snapshot-protected machines. & Computer~1 \\
+  Storage network and firewall & High-speed switch (25~GbE) and a firewall around the system. & Move data between computers quickly; keep the system inside the boundary. & Both \\
+  \bottomrule
+\end{xltabular}}
+
+\ReportSubsection{Expected service levels (planning targets)}
+
+These are targets used for sizing and for acceptance testing in the pilot. They are not
+guarantees until measured on the real hardware with real prompts.
+
+\TableTitle{Service expectations}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{1.0} Y{0.9} Y{1.1}@{}}
+  \toprule
+  Measure & Target & Notes \\
+  \midrule
+  \endhead
+  Named users & At least 20 (stated) & Growth: \PH{expected named users in 3 years}. \\
+  Simultaneous users generating answers & About 12 (stated) & D3 Node~A is rated 8--20; D4 or Node~B serving adds headroom. \\
+  Context size per request & At least 128K tokens (about 300 pages of text) & Quality of recall falls with length; retrieval is preferred for very large archives. \\
+  Time to first word & Under 3~s for prompts up to 16K tokens; under 20~s for 128K & Measured at the gateway under load. \\
+  Streaming speed per user & At least 15--20 tokens/s (faster than reading speed) & Falls if many long prompts arrive together. \\
+  Answers from the archive & Cite document, clause and page & An answer without a citation should be treated as unsupported. \\
+  Availability in duty hours & Target \PH{98\%} & Single-node configurations have no ML failover; Computer~1 has no server redundancy. \\
+  Recovery after failure & Target \PH{RTO} for LLM serving; \PH{RTO/RPO} for files and licenses & Dual-node: switch to Node~B; test before use and after major changes. \\
+  Model refresh & Quarterly review of newer approved models & Tested on Node~B before production. \\
+  Fine-tuning turnaround & Hours to a few days per adapter on one GPU & Measure in the pilot; depends on data size. \\
+  Archive ingestion rate & \PH{documents per hour, measure in pilot} & OCR of scanned pages is the slowest step. \\
+  Data handling & All CUI stays inside the authorization boundary; per-user audit logs & Derived data (indexes, adapters) is treated as CUI. \\
+  \bottomrule
+\end{xltabular}}
+
+\ReportSubsection{What the system will and will not do}
+
+\textbf{Expected to do well}
+\begin{itemize}
+  \item Answer questions from approved documents and cite the source passage.
+  \item Summarize, compare and extract data from long documents, up to the context limit.
+  \item Draft reports, procedures, emails, scripts and code for an engineer to review.
+  \item Process large batches of documents overnight.
+  \item Learn organization vocabulary, formats and task habits through fine-tuning.
+  \item Serve about a dozen people at the same time with acceptable speed.
+\end{itemize}
+
+\textbf{Limits to set expectations}
+\begin{itemize}
+  \item It can be wrong. Every answer used in a deliverable needs engineer review; the
+    system does not replace professional judgment or stamping.
+  \item Training on a document does not reliably make the model remember it exactly;
+    retrieval with citations is how exact wording is obtained.
+  \item In the base plan it cannot read drawings or photographs as images; it reads
+    text, tables and drawing metadata only.
+  \item It does not browse the internet or call outside services.
+  \item Pre-training a new model from scratch is out of scope at this budget.
+  \item The best open-weight models can trail the best proprietary models on the hardest
+    reasoning tasks.
+  \item Capacity is finite: at peak, requests queue, and failure of the serving node
+    reduces service until failover or repair.
+\end{itemize}

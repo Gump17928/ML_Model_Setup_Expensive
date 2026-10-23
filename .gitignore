@@ -1,12 +1,14 @@
-# LaTeX build artifacts
-*.aux
-*.log
-*.out
-*.toc
-*.fls
-*.fdb_latexmk
-*.synctex.gz
-*.xdv
+# Ignore everything, then allow only what is needed to build the reports.
+*
+!*/
+!.gitignore
+!*.tex
+!*.sty
 
-# Separate repo (engineering_doc_templates); do not embed here
-/engineering-intake-templates/
+# Logo images referenced by intake-style.sty (e.g. shared/logo.png)
+!shared/*.png
+!shared/*.jpg
+!shared/*.pdf
+
+# Separate repos (engineering_doc_templates); never embed them here
+/engineering-intake-templates*/

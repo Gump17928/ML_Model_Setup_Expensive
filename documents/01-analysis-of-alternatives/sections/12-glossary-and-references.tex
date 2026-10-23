@@ -1,0 +1,57 @@
+% ===========================================================================
+\ReportSection{Glossary and References}
+
+\TableTitle{Terms used in this report}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.55} Y{1.45}@{}}
+  \toprule
+  Term & Meaning \\
+  \midrule
+  \endhead
+  Adapter (LoRA, QLoRA) & A small set of extra weights trained on top of a fixed model to teach it new vocabulary, formats or tasks. QLoRA does this on a compressed (quantized) copy to save memory. \\
+  Air-gapped & A network physically or logically isolated from the internet. \\
+  ATO (Authority to Operate) & Formal approval to run a system, based on its security documentation and testing. \\
+  CMMC & Cybersecurity Maturity Model Certification: a Department of Defense program requiring contractors to meet security practices such as NIST SP 800-171. \\
+  Context window & The amount of text, counted in tokens, that the model can consider at once: the question, any supplied documents and the answer so far. \\
+  CUI & Controlled Unclassified Information: unclassified government information that must be safeguarded. \\
+  Dell-configured price & The price of a server built to order by Dell, including qualified parts, warranty and support. Here estimated as the street price $\times$ 1.3. \\
+  DFARS 252.204-7012 & Defense acquisition clause requiring adequate security and incident reporting for covered defense information. \\
+  Embedding & A list of numbers representing the meaning of a passage of text, used to search by similarity. \\
+  Failover & Switching to a standby system, automatically or by hand, when the primary one fails. \\
+  Fine-tuning & Further training of an existing model on selected examples to change how it behaves. \\
+  FIPS 140-2/140-3 & Federal standards for validated cryptographic modules. \\
+  GPU and VRAM & Graphics processing unit, and its on-board memory (VRAM), which holds the model and the conversation caches. \\
+  HBA & Host bus adapter: the card that connects a set of drives to the server. \\
+  Hypervisor and virtual machine (VM) & Software that runs several isolated virtual computers on one physical server. \\
+  Inference & Running a trained model to produce an answer, as opposed to training it. \\
+  KV cache & Memory the model keeps for each active conversation so it does not re-read the whole text for every new word; it grows with context length. \\
+  LLM & Large language model. \\
+  Mixture of experts (MoE) & A model design in which only a small part of the model is used for each word, making it faster than a dense model of the same size. \\
+  Named and simultaneous users & People who have accounts, and people generating an answer at the same moment. \\
+  NAS & Network-attached storage: shared file storage reached over the network. \\
+  NIST SP 800-171 & NIST publication listing the security requirements for protecting CUI on non-federal systems. \\
+  OCR & Optical character recognition: turning scanned pages into text. \\
+  Open-weight model & A model whose trained weights are published for local use under a license. \\
+  Prefill & The step where the model reads the prompt before it starts writing; very long prompts make it slower. \\
+  Quantization & Storing model numbers with fewer bits (for example 4-bit) to save memory at a small cost in accuracy. \\
+  RAID-Z2 & A disk arrangement that tolerates the failure of any two drives in the array. \\
+  Reranker & A model that reorders retrieved passages by how well they answer the question. \\
+  Retrieval (RAG) & Retrieval-augmented generation: finding relevant passages in an index of documents and giving them to the model so it answers from them, with citations. \\
+  RTO and RPO & Recovery time objective (how long an outage may last) and recovery point objective (how much recent data may be lost). \\
+  SIEM & Security information and event management: the central system that collects and analyzes security logs. \\
+  SMB and NFS & Network file-sharing protocols used by Windows and by Linux/Unix systems. \\
+  Snapshot & A read-only point-in-time copy of a file system that allows recovery from deletion or change. \\
+  SSP & System Security Plan. \\
+  STIG & Security Technical Implementation Guide: configuration hardening rules. \\
+  TAA and Section 889 & Trade Agreements Act and NDAA Section~889: sourcing rules limiting country of origin and certain vendors. \\
+  Tensor parallelism & Splitting one model across several GPUs so they work on each word together. \\
+  Token & A piece of text, roughly three-quarters of a word, used as the unit for context size and speed. \\
+  Vector database & A database that stores embeddings and finds the most similar ones quickly. \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Reference topics to cite in the final report (verify current versions):}
+NIST SP 800-171 (Rev~2/3), 800-171A, 800-53; NIST AI RMF 1.0; 32~CFR Part~2002;
+DFARS 252.204-7012; CMMC (32~CFR Part~170); NDAA Section~889; Trade Agreements Act;
+vendor datasheets for the selected GPUs, servers and storage; model cards and licenses
+for each candidate model; vLLM and SGLang documentation.

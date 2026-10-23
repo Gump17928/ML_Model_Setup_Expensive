@@ -1,0 +1,27 @@
+% ===========================================================================
+\ReportSection[sec:risks]{Risks, Constraints and Mitigations}
+
+\TableTitle{Risks and mitigations}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.769}Y{1.231}@{}}
+  \toprule
+  Risk or concern & Mitigation \\
+  \midrule
+  \endhead
+  Output errors (hallucination) & Citations, human review of anything used in deliverables, policy and training. \\
+  Authorization (ATO) timeline, now covering file share and private cloud as well & Early engagement with the security office; one boundary and System Security Plan for both computers. \\
+  Operations staffing & Named owner with about 3--4~hr/week protected for upkeep (more during setup and expansion); documented runbooks and a backup person. \\
+  Computer 1 is a single point of failure for storage, licenses and the application tier & RAID-Z2 with a hot spare, redundant power supplies, UPS, tested restore; second gateway on Node~B. No second server (sponsor decision); an offline backup copy (about \$2--4K) is recommended because RAID and snapshots share one machine. \\
+  A fine-tuned model states wrong clause numbers or requirements & Retrieval with citations is the primary mechanism; evaluate adapters against known answers; human review of anything used in deliverables. \\
+  Standards such as NFPA~780 are copyrighted and the license may not allow AI indexing or training & Check license terms before ingesting. \\
+  Autodesk or Bluebeam needs internet sign-in or cloud services outside the boundary & Verify the licensing model and self-hosted options with the vendors before the design is frozen. \\
+  License vendor restricts virtualization or hardware binding & Confirm terms before the design is frozen; use a dedicated host if required. \\
+  Quality gap versus top commercial models & Pilot with side-by-side evaluation on real tasks; use retrieval and tuned prompts. \\
+  TAA/OEM sourcing raises hardware cost 15--40\% & Confirm early; obtain OEM quotes. \\
+  Single-node configurations have no ML failover & Cold spares, data backups, cloud contingency plan, or choose a dual-node configuration. \\
+  Adoption lower than planned & Champions, training, workflow templates, sponsorship. \\
+  Model license or provenance & Legal review; approved U.S. or allied-origin models. \\
+  Fine-tuned models inherit CUI sensitivity & Registry access control; include in backup and sanitization rules. \\
+  Over-reliance on AI & Governance policy and acceptable-use rules. \\
+  \bottomrule
+\end{xltabular}}

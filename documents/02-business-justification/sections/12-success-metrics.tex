@@ -1,0 +1,23 @@
+% ===========================================================================
+\ReportSection[sec:kpi]{Success Metrics}
+
+\TableTitle{Key performance indicators}
+{\small
+\begin{xltabular}{\textwidth}{@{}Y{0.724}Y{1.448}Y{0.828}@{}}
+  \toprule
+  Category & Metric & Target (initial) \\
+  \midrule
+  \endhead
+  Adoption & Weekly active users / named users & 60\% or more by month 6 \\
+  Productivity & Hours saved per user per week (survey + measured) & 1.5~hr or more \\
+  Quality & User satisfaction & 4.0 / 5 or more \\
+  Performance & 95th-percentile time to first token (prompts up to 16K) & Under 3~s \\
+  Performance & Streaming speed per user & 15--20 tokens/s or more \\
+  Capacity & Sustained GPU utilization on the serving node & 40--70\% \\
+  Reliability & Availability of LLM service during duty hours & 98\% or more \\
+  Resilience & Failover test passed (dual-node) and restore test passed & Before production; then quarterly \\
+  Training & Fine-tuning jobs completed without affecting serving latency & All \\
+  Compliance & Open high security findings / CUI incidents & 0 / 0 \\
+  Capability & Workflows enabled that were impossible before & 5 or more within 6 months \\
+  \bottomrule
+\end{xltabular}}

@@ -1,0 +1,18 @@
+% ===========================================================================
+\ReportSection[sec:multi]{Multi-User Operation (Business View)}
+
+\begin{itemize}
+  \item One shared platform serves the organization; each user sees only the documents
+    and conversations they are authorized for.
+  \item \textbf{Fair-use quotas} and priority classes keep interactive users responsive
+    while batch jobs and training run off the serving node.
+  \item \textbf{Usage dashboards} show adoption and benefit by team (supports showback
+    or chargeback).
+  \item \textbf{Incremental scaling:} capacity grows by adding GPUs (about \$9K each) or a
+    node, without changing the user experience.
+  \item \textbf{Limits to communicate:} the stated need is about 12 people generating at the
+    same moment. D3's Node~A is rated for 8--20, so 12 fits with margin; others queue
+    briefly. Very long (128K-token) requests consume more capacity than short chats. On
+    failover to a 1-GPU Node~B, capacity falls to about 3--8 simultaneous users (quotas
+    ration it); a 2-GPU Node~B (D4) restores full capacity.
+\end{itemize}

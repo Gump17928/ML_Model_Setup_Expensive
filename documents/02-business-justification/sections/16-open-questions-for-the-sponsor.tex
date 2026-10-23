@@ -1,0 +1,31 @@
+% ===========================================================================
+\ReportSection[sec:open]{Open Questions for the Sponsor}
+\TodoAnchor{bj-open}
+
+Answers received for v0.4: at least 20 named users with about 12 at once; the model must
+use and train on NAS archive data (for example NFPA~780); training alongside serving is the
+main use of Node~B, with a second-serving-node option; Autodesk and Bluebeam are to be
+hosted; storage was estimated at 40--70~TB within 3 years; the labor assumptions are
+accepted for now; redundancy for Computer~1 is disks inside the server; Dell is the
+vendor; a cloud fallback is desirable but undecided.
+
+\TableTitle{Questions that remain}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}c Y{1.231} Y{0.769}@{}}
+  \toprule
+  \# & Question & Why it matters \\
+  \midrule
+  \endhead
+  1 & Archive: how large is it now (TB), what formats (scanned PDFs, Office, DWG/Revit, Bluebeam markups), and how are folders and permissions organized? Which documents go first? & Sets ingestion effort and storage; CAD drawings are not text. \\
+  2 & Do the licenses for standards such as NFPA~780 allow internal indexing and AI training? & Publisher terms may forbid it. \\
+  3 & Autodesk and Bluebeam: which products, named-user or network licensing, does the enclave allow vendor sign-in, and are Vault or Bluebeam collaboration services needed on-site? & Decides whether license servers are needed and what Computer~1 must host. \\
+  4 & Server standard: Windows Server with Hyper-V and Active Directory, or Linux with KVM? & Affects Autodesk and Bluebeam hosting, file-share permissions and licensing cost (about \$2--8K). \\
+  5 & Dell quotes for Computer~1 and each node configuration; which Dell models support the chosen GPUs? & Replaces the 1.3 planning multiplier. \\
+  6 & While Node~A is down, is serving 3--8 users acceptable, or must all 12 be served (Node~B with 2 GPUs, D4)? & Decides between D3 and D4 (about \$12K more at Dell-configured prices). \\
+  7 & How fast will named users grow beyond 20? Is Node~B expected to serve as a second node routinely? & Determines when to add GPUs or a node. \\
+  8 & Is an offline backup copy wanted in addition to disk redundancy? & About \$2--4K; covers server loss and ransomware. \\
+  9 & Which cloud fallback option(s) in ENG-RPT-01 should be refined (none, non-CUI only, CUI-authorized government cloud, warm standby)? & Defines the contingency and its approvals. \\
+  10 & What do the current tools cost, and when do their contracts end? (Unknown at present.) & Offsets part of the new cost. \\
+  11 & Branding and handling: center name and logo, marking text, document numbers (ENG-RPT-01, ENG-RPT-02), linked intake reference, distribution list. & Currently placeholders on the cover and control block. \\
+  \bottomrule
+\end{xltabular}}

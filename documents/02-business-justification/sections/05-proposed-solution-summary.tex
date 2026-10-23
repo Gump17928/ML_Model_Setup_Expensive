@@ -1,0 +1,53 @@
+% ===========================================================================
+\ReportSection[sec:solution]{Proposed Solution (Summary)}
+
+\textbf{Computer~1 -- NAS and private-cloud server.} Departmental file share,
+bulk storage and backups, software license servers, a private cloud for specific
+software, and the LLM application tier (gateway, chat interface, retrieval, vector
+database, model registry, logging).
+
+\textbf{Computer~2 -- ML node(s).} Open-weight LLMs (for example a roughly 120B-class
+mixture-of-experts model) on workstation-class 96~GB GPUs, with an OpenAI-compatible
+API, retrieval over controlled repositories, single sign-on and audit logging,
+all inside the CUI boundary. Either one node, or two nodes: Node~A serves users while
+Node~B trains and experiments, and can take over serving if Node~A fails. All ML
+nodes use the same chassis class, so adding a third node later is a copy of an
+existing one.
+
+\TableTitle{Configurations (hardware only; see ENG-RPT-01 for detail)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.219} r Y{0.75} Y{1.031}@{}}
+  \toprule
+  Config. & Composition & Hardware & Active users* & Training and resilience \\
+  \midrule
+  \endhead
+  S1 & Computer~1 + 1-GPU node & \$35K & 3--8 & Training shares the GPU; no failover. \\
+  S2 & Computer~1 + 2-GPU node & \$44K & 8--20 & Split GPUs between serving and training; no failover. \\
+  D1 & Computer~1 + two 1-GPU nodes & \$55K & 3--8 & Dedicated training node; full-capacity failover. \\
+  \textbf{D3} & \textbf{Computer~1 + 2-GPU node (A) + 1-GPU node (B)} & \textbf{\$64K} & \textbf{8--20} & \textbf{Dedicated training node; reduced-capacity failover.} \\
+  S4 & Computer~1 + 4-GPU node & \$65K & 25--50 & Single node; no failover. \\
+  D4 & Computer~1 + two 2-GPU nodes & \$73K & 8--20 (A), more with both serving & Dedicated training node; full-capacity failover. \\
+  \bottomrule
+\end{xltabular}}
+{\footnotesize * Simultaneous active users on the serving node(s). The stated need is at least 20 named users with about 12 at once, so S1 and D1 (1-GPU serving node) fall short. Hardware is at street prices; Dell-configured prices are about 1.15--1.4 times higher. Estimates to be confirmed by benchmark.}
+
+\ReportSubsection{What to expect from the system}
+
+\TableTitle{Expectations in plain terms (planning targets; ENG-RPT-01 gives the detail)}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{0.7} Y{1.3}@{}}
+  \toprule
+  Topic & What to expect \\
+  \midrule
+  \endhead
+  Who can use it & At least 20 named users, with about 12 able to get answers at the same moment. Others wait briefly at peak. \\
+  How much it can read at once & About 300 pages (128K tokens) in one request. Larger archives are searched by retrieval rather than read whole. \\
+  Speed & First words in under 3~seconds for ordinary questions, then faster than reading speed. Very long documents take longer. \\
+  Answers from the archive & Cited to the document, clause and page. An answer with no citation should not be relied on. \\
+  Accuracy & Good first drafts and summaries; it can be wrong. Engineers review anything that goes into a deliverable. \\
+  Learning your material & Retrieval makes archived documents and standards (for example NFPA~780) usable immediately; fine-tuning adapts style and vocabulary but does not replace retrieval. \\
+  Where data goes & Nothing leaves the organization's boundary; everything is logged per user. \\
+  If something fails & With two ML nodes, serving moves to Node~B at reduced capacity in D3; with one node, service stops until repair. Computer~1 relies on disk redundancy only. \\
+  What it does not do & Read drawings as images, browse the internet, or train a new model from scratch. \\
+  \bottomrule
+\end{xltabular}}

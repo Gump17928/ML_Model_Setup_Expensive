@@ -1,0 +1,22 @@
+% ===========================================================================
+\ReportSection{Implementation Roadmap}
+
+\TableTitle{Phases}
+{\small
+\begin{xltabular}{\textwidth}{@{}Y{0.545}Y{1.636}Y{0.819}@{}}
+  \toprule
+  Phase & Activities & Output \\
+  \midrule
+  \endhead
+  0. Discovery & Confirm user counts, workflows, storage and license inventory, sourcing rules (TAA), model policy, facility, recovery targets. & Validated requirements. \\
+  1. Pilot and benchmark & Borrow or buy one ML node; benchmark 2--3 candidate models, an adapter fine-tune, and retrieval over a licensed standard such as NFPA~780 (non-sensitive) on representative prompts; test 12 simultaneous users; compare with the current tools. & Throughput, latency and quality data; configuration decision. \\
+  2. Procurement and ATO preparation & Quotes, purchase order, SSP, STIG baselines, model-import procedure, license-vendor confirmations. & Approved design. \\
+  3. Deploy Computer 1 and Node A & Install, harden, migrate file share and license servers, deploy gateway, retrieval and SSO; 20--40 pilot users. & Initial operating capability. \\
+  4. Add Node B (and GPUs) & Dedicated training node, failover test, rolling-upgrade procedure; add GPUs as utilization triggers fire. & Full operating capability. \\
+  5. Sustain & Quarterly model refresh, security review, restore test, usage reporting. & Continuous improvement. \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Expansion triggers:} sustained GPU utilization above 70\%, 95th-percentile time to first token above target,
+or queue wait above 10~s. \textbf{Failover test:} run before production use and
+after every major change.

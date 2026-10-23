@@ -1,0 +1,45 @@
+% ===========================================================================
+\ReportSection[sec:alts]{Alternatives Considered}
+
+\TableTitle{Alternatives and disposition}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{0.667} Y{1.333}@{}}
+  \toprule
+  \# & Alternative & Disposition \\
+  \midrule
+  \endhead
+  0 & \textbf{Status quo}: two existing in-house tools & Baseline. No new cost; capability and context gaps persist; limited API and retrieval. Does not provide the storage, licensing or private-cloud capability. \\
+  1 & \textbf{Commercial public SaaS} & \textbf{Eliminated.} Not suitable for CUI. \\
+  2 & \textbf{Compliant cloud LLM} (e.g., Azure OpenAI in Azure Government, AWS Bedrock in GovCloud) & Viable for the LLM only. Fast, strong models, no GPU hardware. Cost scales with long-context use; CUI leaves the site; contract and boundary review needed. Estimated \$0.03M--\$0.4M over 3 years for 20--30 users (usage-driven; verify). \textbf{Computer~1 is still required} for storage and licensing. \\
+  3 & \textbf{On-premises design (Computer~1 + ML node[s])} & Detailed in Section~\ref{sec:hw}. Two families: \textbf{single-node} (S1, S2, S4) and \textbf{dual-node} (D1, D3, D4). \\
+  4 & \textbf{Hybrid}: on-premises for CUI, cloud for non-CUI & Possible later; needs a routing policy and adds mis-routing risk. \\
+  \bottomrule
+\end{xltabular}}
+
+\textbf{Below the smallest ML node (not recommended for production).} Small
+unified-memory systems (for example NVIDIA DGX Spark-class or AMD Strix Halo
+mini PCs, about \$2--5K) can run large models for one developer, but their
+memory bandwidth is roughly 6--7 times lower than a 96~GB workstation GPU, so
+they do not serve several simultaneous users well.
+
+\ReportSubsection[sec:fallback]{Cloud fallback options}
+\TodoAnchor{aoa-fallback}
+
+Whether a cloud service should back up the on-premises LLM is undecided; the options
+below are kept open for refinement.
+
+\TableTitle{Fallback options if the on-premises LLM is unavailable}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l Y{1.0} Y{1.1} Y{0.9}@{}}
+  \toprule
+  Option & Description & CUI and network considerations & Cost \\
+  \midrule
+  \endhead
+  F0 & No cloud fallback. Users use Tool A or Tool B, or wait. & Nothing leaves the boundary. & None. \\
+  F1 & Commercial cloud LLM for non-CUI work only. & No CUI may be entered; needs a user policy and an approved internet path outside the enclave. & Low, pay per use. \\
+  F2 & Government-cloud LLM authorized for CUI (for example Azure OpenAI in Azure Government or Bedrock in GovCloud), reached over an approved connection. & Needs contract flow-down, an authorization decision, and a network path that an air-gapped design would not have. Data leaves the site. & Pay per use; setup effort for the account, connection and approval; usually no cost while idle. \\
+  F3 & Warm standby: the same open-weight stack, deployed from configuration code onto rented compliant GPU instances only when needed. & Same boundary questions as F2; CUI copies of indexes would be needed there. & Hourly instance cost while running; setup effort. \\
+  \bottomrule
+\end{xltabular}}
+F0 is the baseline in this report. F2 is the most capable and the most demanding to
+authorize. \PH{Select the option(s) to carry forward.}

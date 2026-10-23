@@ -1,0 +1,42 @@
+% ===========================================================================
+\ReportSection[sec:exec]{Executive Summary}
+
+\begin{itemize}
+  \item The current tools are \textbf{functionally limited and constrained by small
+    context windows}, so they cannot support the document-heavy, multi-step
+    engineering workflows the organization needs (long specifications,
+    multi-document comparison, large scripts and codebases, report generation).
+  \item Staff either work around the limits by hand, abandon the tools, or are
+    tempted to use unapproved external tools, which is a CUI spill risk.
+  \item A self-hosted ML node provides \textbf{128K-token context}, an \textbf{API for
+    automation}, \textbf{retrieval over internal repositories}, \textbf{multi-user
+    concurrency} and \textbf{full control of CUI} inside the authorization boundary.
+  \item A \textbf{second ML node} lets fine-tuning run \emph{at the same time} as
+    production use without slowing users down, gives a failover path, and lets
+    upgrades be tested before they reach users.
+  \item \textbf{Computer~1} (about \$15K at street prices, about \$20K Dell-configured)
+    consolidates file storage, backups,
+    software license servers and a private cloud for specific software. It is needed
+    whichever LLM option is chosen, so the cost that depends on the LLM decision is
+    the ML node(s).
+  \item \textbf{Recommended configuration D3:} Computer~1 + a 2-GPU serving node + a
+    1-GPU training node that can also serve as a second node. Hardware is about \$64K at
+    street prices and about \$83K Dell-configured (range \$66--101K). Three-year cost
+    including labor is about \$131--192K Dell-configured, of which the ML side is about
+    \$98--145K (about \$123K expected). A 1-GPU serving node is rated for 3--8
+    simultaneous users, below the stated 12, so the single-GPU configurations S1 and D1
+    are not recommended.
+  \item \textbf{The NAS archive becomes usable knowledge.} The model can answer questions
+    from archived project data with citations (retrieval) and can be fine-tuned on
+    selected documents, for example a licensed copy of NFPA~780. Retrieval is the primary
+    mechanism; fine-tuning teaches vocabulary, formats and tasks.
+  \item \emph{Illustrative} result on the ML side alone, for 30 active users saving
+    2~hr/week: payback in about \textbf{15 months} and a 3-year return of about 94\%.
+    Attributing Computer~1 to the project lengthens payback to about 21 months. If only
+    the minimum 20 users each save 1~hr/week, time savings alone do \emph{not} repay the
+    cost. The 3-year cost is recovered at about \textbf{1~hour per user per week}
+    (Section~\ref{sec:fin}).
+  \item The strongest justification is not only cost: it is \textbf{workflows that
+    are impossible today}, \textbf{lower data-handling risk}, and the ability to
+    \textbf{adapt models to internal data} on equipment the organization controls.
+\end{itemize}

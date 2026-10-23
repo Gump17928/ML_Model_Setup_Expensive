@@ -1,0 +1,47 @@
+% ===========================================================================
+\ReportSection[sec:current]{Current State}
+
+\ReportSubsection{Existing tools (complete the table)}
+\TodoAnchor{bj-tools}
+
+\TableTitle{Existing tools versus what the target workflows need}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}Y{1.053}Y{0.842}Y{0.842}Y{1.263}@{}}
+  \toprule
+  Attribute & Tool A: \PH{name} & Tool B: \PH{name} & Needed for target workflows \\
+  \midrule
+  \endhead
+  Hosting / owner & \PH{ } & \PH{ } & On-premises or accredited enclave \\
+  CUI authorized? & \PH{ } & \PH{ } & Yes (required) \\
+  Underlying model & \PH{ } & \PH{ } & Selectable, upgradable, auditable \\
+  Max context window & \PH{e.g., 4K--32K} & \PH{ } & 128K tokens or more \\
+  Max output length & \PH{ } & \PH{ } & 4K--8K tokens or more \\
+  File and document upload limits & \PH{ } & \PH{ } & Large PDFs, spreadsheets, code \\
+  API / automation & \PH{ } & \PH{ } & Yes (OpenAI-compatible) \\
+  Retrieval over internal data & \PH{ } & \PH{ } & Yes, with per-group access control \\
+  Concurrency / rate limits & \PH{ } & \PH{ } & Supports team-wide peak use \\
+  Customization / fine-tuning & \PH{ } & \PH{ } & Prompt libraries, custom tools, adapter fine-tuning \\
+  Code and script assistance quality & \PH{ } & \PH{ } & Strong \\
+  Audit logging & \PH{ } & \PH{ } & Per-user, exportable to the SIEM \\
+  Cost model & \PH{ } & \PH{ } & Predictable \\
+  Roadmap control & Vendor & Vendor & Organization-controlled \\
+  Retention and training on inputs & \PH{ } & \PH{ } & None; organization-controlled \\
+  \bottomrule
+\end{xltabular}}
+
+\ReportSubsection{Observed pain points (validate with a user survey)}
+\TodoAnchor{bj-arrangement}
+\begin{enumerate}
+  \item \textbf{Context limits} force document splitting, losing cross-references and
+    giving inconsistent answers.
+  \item \textbf{Limited functionality:} weak file handling, no custom tools, no API or
+    workflow chaining.
+  \item \textbf{Quality gaps} on technical reasoning, code and long structured output.
+  \item \textbf{Low adoption and trust:} users stop using tools after poor results, so
+    existing spend yields little value.
+  \item \textbf{Shadow-AI risk:} users may paste work content into unapproved tools.
+  \item \textbf{No adaptability} to organizational terminology, templates and standards.
+  \item \textbf{No shared storage, license or private-cloud capability} tied to the
+    AI tools: engineering data and software services are managed separately
+    \PH{describe current arrangement}.
+\end{enumerate}

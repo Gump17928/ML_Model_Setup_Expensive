@@ -1,0 +1,31 @@
+% ===========================================================================
+\IntakeSection{Items To Complete Before Release}
+
+\Guidance{Every placeholder and open decision in this report is listed here and links to the
+place it appears. Resolve each item, tick the Status box, and update the revision history
+before the report is sent outside the team. ``Required'' items are missing information;
+``Confirm'' items are assumptions that need a named person to agree to them.}\\[4pt]
+
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}c Y{1.5} Y{0.7} c c Y{0.8}@{}}
+  \toprule
+  \# & Item & Needed from & Priority & Status & Go to \\
+  \midrule
+  \endhead
+  1 & Document identity and handling: author, linked intake reference, recipients, center name and logo, marking text, version and date. & Document owner, security office & Required & $\square$ & \TodoLink{bj-ctrl}{Control block} \\
+  2 & Organization name and the names of Tool~A and Tool~B. & Sponsor & Required & $\square$ & \TodoLink{bj-purpose}{Purpose} \\
+  3 & Existing-tools table: hosting, CUI authorization, model, context window, output and upload limits, API, retrieval, rate limits, cost model, retention; plus usage statistics. & IT, tool owners & Required & $\square$ & \TodoLink{bj-tools}{Existing tools} \\
+  4 & Current arrangement and cost for file storage, license servers and private-cloud software. & IT & Required & $\square$ & \TodoLink{bj-arrangement}{Pain points} \\
+  5 & Status-quo costs: current license, subscription and support fees, contract end dates, and any vendor upgrade quotes. & Finance, contracts & Required & $\square$ & \TodoLink{bj-statuscost}{Costs} \\
+  6 & Dell quotes for Computer~1 and the nodes (replace the 1.3 multiplier); Windows Server, database and client-access licensing (about \$2--8K, not yet included). & Dell account team, IT & Required & $\square$ & \TodoLink{bj-costs}{Costs} \\
+  7 & Labor assumptions (hourly rate, upkeep hours, setup hours) still accepted. & Sponsor, finance & Confirm & $\square$ & \TodoLink{bj-labor}{Labor assumptions} \\
+  8 & Replace the illustrative scenario inputs with measured values: active users by team, roles and rates, hours saved (time study and pilot), realization factor. & Sponsor, pilot team & Required & $\square$ & \TodoLink{bj-scen}{Scenarios} \\
+  9 & Decide D3, D4 or S2 once the training workload and the required recovery time are known; update the second-node analysis. & Sponsor & Required & $\square$ & \TodoLink{bj-nodeb}{Second ML node} \\
+  10 & Workflow list: users per workflow, domain for the fine-tuned assistant, current arrangement for hosted software. & Department leads & Required & $\square$ & \TodoLink{bj-usecases}{Use cases} \\
+  11 & Baseline data: usage statistics, time study, unapproved-tool survey, archive size, fine-tuning workload, operator time. & Project team & Required & $\square$ & \TodoLink{bj-baseline}{Baseline data} \\
+  12 & Answers to the open questions: archive size and formats, standards licenses, Autodesk and Bluebeam licensing, server standard, failover target, backup copy, cloud fallback, branding. & Sponsor & Required & $\square$ & \TodoLink{bj-open}{Open questions} \\
+  13 & Approvers named, decisions and dates recorded. & Sponsor & Required & $\square$ & \TodoLink{bj-approve}{Approvals} \\
+  14 & Cross-check all figures against ENG-RPT-01 and update both documents together. & Document owner & Required & $\square$ & \TodoLink{bj-costs}{Costs} \\
+  15 & No bracketed placeholders remain in the finished PDF; compiled twice so the contents and cross-references are current; revision history updated. & Document owner & Required & $\square$ & --- \\
+  \bottomrule
+\end{xltabular}}
